@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
-import experiment_utils as util
 import experiments_v2.helper_functions as helper
 import seaborn as sns
 
@@ -48,23 +47,6 @@ def plotAcceptRejectData(data, boolean_mask):
     plt.scatter(accepted_data[:, 0], accepted_data[:, 1], c="green", label="Accepted data", zorder=98, s=2**4, alpha=alpha_val)
     plt.scatter(rejected_data[:, 0], rejected_data[:, 1], c="red", label="Rejected data", zorder=97, s=2**4, alpha=alpha_val)
 
-def visualizeRecall(real_features, fake_features, k_val):
-    plt.figure(figsize=(8, 10))
-    plt.title("Recall")
-    boundaries_real, boundaries_fake, distance_matrix_pairs = util.getBoundaries(real_features, fake_features, k_val)
-    accept_reject_boolean = (distance_matrix_pairs < np.expand_dims(boundaries_fake, axis=0)).any(axis=1)
-
-    # Plot the manifold used as inference as circles
-    plotCircles(fake_features, boundaries_fake)
-    plotAcceptRejectData(real_features, accept_reject_boolean)
-    for index, sample in enumerate(real_features):
-        plt.annotate(index+1, (sample[0], sample[1]), fontsize=16, color="b")
-    plt.scatter(fake_features[:, 0], fake_features[:, 1], label="Fake data", c="black", s=2 ** 6)
-    all_data = np.concatenate([real_features, fake_features], axis=0)
-    range = 3
-    plt.xlim([-range, range])
-    plt.ylim([-range, range])
-    plt.legend()
 
 def _plotErrorbar(subplot, title_text, x, scores):
     score_mean = np.mean(scores)
