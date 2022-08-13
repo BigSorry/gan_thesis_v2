@@ -1,4 +1,5 @@
 .idea/
-*.py[cod]
 __pycache__/
-experiments_v2/__pycache__/
+*.py[cod]
+
+
