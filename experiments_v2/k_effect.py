@@ -15,8 +15,9 @@ def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_ma
             boundaries_fake = distance_matrix_fake[:, k_val]
             precision, recall, density, coverage = helper.getScores(distance_matrix_pairs, boundaries_fake,
                                                                     boundaries_real, k_val)
-            area_real = np.mean(helper.getArea(boundaries_real))
-            area_fake = np.mean(helper.getArea(boundaries_fake))
+            area_real = np.sum(helper.getArea(boundaries_real))
+            area_fake = np.sum(helper.getArea(boundaries_fake))
+
 
             row_data.append([i, k_val, area_real, area_fake, recall, coverage])
 
@@ -31,35 +32,44 @@ from sklearn.utils import shuffle
 def doExperiment():
     # Set experiment params
     iters = 1
-    samples_both = 5000
+    samples_both = 1000
     fake_samples = samples_both
     real_samples = samples_both
-    variance = 0.1
-    k_vals = [1, 2, 4, 8, 16, 32, 100, 150, 200, 250, 500, 999]
+    variance = 0.01
+    k_vals = np.linspace(1, 999, 50, dtype=int)
     dimensions = [2, 4, 8, 12, 16, 25, 32, 512]
+    dimensions = [2]
     # Prep dataframe
     for dim in dimensions:
         real_data, fake_data = experiment_diverse.getDataNew(real_samples, fake_samples,
                                                              variance, dim)
         distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = helper.getDistanceMatrices(real_data, fake_data)
         dataframe = getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
-        dataframe["real_div_max"] = dataframe["area_real"] / dataframe["area_real"].max()
-        dataframe["fake_div_max"] = dataframe["area_fake"] / dataframe["area_fake"].max()
+        dataframe["real_div_norm"] = (dataframe["area_real"] - dataframe["area_real"].min()) /\
+                                     (dataframe["area_real"].max() - dataframe["area_real"].min())
+        dataframe["fake_div_norm"] = (dataframe["area_fake"] - dataframe["area_fake"].min()) /\
+                                     (dataframe["area_fake"].max() - dataframe["area_fake"].min())
 
         # Do plotting
-        plt.figure()
-        plt.title(f"Sum of all Areas with dim is {dim}")
-        plt.plot(dataframe["k_val"], dataframe["real_div_max"], label="real")
-        plt.plot(dataframe["k_val"], dataframe["fake_div_max"], label="fake")
-        plt.ylim([0, 1.1])
-        plt.legend()
-        plt.figure()
-        plt.title(f"Scores with dim is {dim}")
-        plt.plot(dataframe["k_val"], dataframe["recall"], label="recall")
-        plt.plot(dataframe["k_val"], dataframe["coverage"], label=" coverage")
-        plt.ylim([0, 1.1])
-        plt.legend()
-        #plotting.plotInterface(data_dict, save=False, save_path="")
+        if dim == 2:
+            plt.figure()
+            plt.title(f"Sum of all Areas with dim is {dim}")
+            plt.plot(dataframe["k_val"], dataframe["real_div_norm"], label="real")
+            plt.plot(dataframe["k_val"], dataframe["fake_div_norm"], label="fake")
+            plt.ylim([0, 1.1])
+            plt.xscale('log')
+            plt.legend()
+            plt.figure()
+            plt.title(f"Scores with dim is {dim}")
+            plt.plot(dataframe["k_val"], dataframe["recall"], label="recall")
+            plt.plot(dataframe["k_val"], dataframe["coverage"], label=" coverage")
+            plt.ylim([0, 1.1])
+            plt.xscale('log')
+            plt.legend()
+            for index, k in enumerate(k_vals):
+                if index % 10 == 0:
+                    data_dict = {"real_data":[real_data], "fake_data":[fake_data], "k_val":[k], "titles":[f"K-val is {k}"]}
+                    plotting.plotInterface(data_dict, save=False, save_path="")
 
 def runAll():
     doExperiment()
