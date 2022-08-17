@@ -5,6 +5,19 @@ import visualize as plotting
 import experiments_v2.helper_functions as helper
 import experiments_v2.fake_diverse as experiment_diverse
 
+def plotLines(var_x, var_y1, var_y2, text_info, save=False):
+    # Do plotting
+    plt.figure()
+    plt.title(text_info["title_text"])
+    plt.plot(var_x, var_y1, label=text_info["label1"], c="blue")
+    plt.plot(var_x, var_y2, label=text_info["label2"], c="red")
+    plt.xlabel("K value")
+    plt.ylim([0, 1.1])
+    plt.xscale('log')
+    plt.legend()
+    if save == True:
+        plt.savefig(text_info["save_path"], bbox_inches="tight")
+
 def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs,
                   iters, save=False):
     columns = ["iter_id", "k_val", "area_real", "area_fake",  "recall", "coverage"]
@@ -28,15 +41,23 @@ def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_ma
     return datafame
 
 
-def doAreaoperation(real, fake):
+def normUnion(real, fake):
     combined = pd.concat([real, fake])
-
     real_normed = (real - combined.min()) / \
                                  (combined.max() - combined.min())
     fake_normed = (fake - combined.min()) / \
                                  (combined.max() - combined.min())
 
     return real_normed, fake_normed
+
+def normSeparate(real, fake):
+    real_normed = (real - real.min()) / \
+                                 (real.max() - real.min())
+    fake_normed = (fake - fake.min()) / \
+                                 (fake.max() - fake.min())
+
+    return real_normed, fake_normed
+
 from sklearn.utils import shuffle
 # TODO Refactoring once results are explained clearly
 def doExperiment():
@@ -55,26 +76,21 @@ def doExperiment():
                                                              variance, dim)
         distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = helper.getDistanceMatrices(real_data, fake_data)
         dataframe = getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
+        real_normed_un, fake_normed_un = normUnion(dataframe["area_real"], dataframe["area_fake"])
+        real_normed_sep, fake_normed_sep = normSeparate(dataframe["area_real"], dataframe["area_fake"])
 
-        real_normed, fake_normed = doAreaoperation(dataframe["area_real"], dataframe["area_fake"])
-        dataframe["real_norm"] = real_normed
-        dataframe["fake_norm"] = fake_normed
+        text_info = {"label1":"Real data", "label2": "Fake data", "save_path":f"../fig_v2/k_effect/areas_un_dim{dim}.png",
+                     "title_text": f"Union normalized sum of ball area's with dimension {dim}"}
+        plotLines(dataframe["k_val"], real_normed_un,  fake_normed_un, text_info, save=True)
 
-        # Do plotting
-        plt.figure()
-        plt.title(f"(Union data) normalized sum of boundaries with dim is {dim}")
-        plt.plot(dataframe["k_val"], dataframe["real_norm"], label="real")
-        plt.plot(dataframe["k_val"], dataframe["fake_norm"], label="fake")
-        plt.ylim([0, 1.1])
-        plt.xscale('log')
-        plt.legend()
-        plt.figure()
-        plt.title(f"Scores with dim is {dim}")
-        plt.plot(dataframe["k_val"], dataframe["recall"], label="recall")
-        plt.plot(dataframe["k_val"], dataframe["coverage"], label=" coverage")
-        plt.ylim([0, 1.1])
-        plt.xscale('log')
-        plt.legend()
+        text_info = {"label1": "Real data", "label2": "Fake data",
+                     "save_path": f"../fig_v2/k_effect/areas_sep_dim{dim}.png",
+                     "title_text": f"Separately normalized sum of ball area's with dimension {dim}"}
+        plotLines(dataframe["k_val"], real_normed_sep, fake_normed_sep, text_info, save=True)
+
+        text_info = {"label1": "Recall", "label2": "Coverage", "save_path":f"../fig_v2/k_effect/scores_dim{dim}.png",
+                      "title_text": f"Metric scores with dimension {dim}"}
+        plotLines(dataframe["k_val"], dataframe["coverage"], dataframe["recall"], text_info, save=True)
         if dim == 2:
             for index, k in enumerate(k_vals):
                 if index % 20 == 0:
@@ -83,6 +99,5 @@ def doExperiment():
 
 def runAll():
     doExperiment()
-    plt.show()
 
 runAll()
