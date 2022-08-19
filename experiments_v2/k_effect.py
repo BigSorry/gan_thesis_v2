@@ -30,8 +30,6 @@ def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_ma
                                                                     boundaries_real, k_val)
             area_real = np.sum(helper.getArea(boundaries_real))
             area_fake = np.sum(helper.getArea(boundaries_fake))
-
-
             row_data.append([i, k_val, area_real, area_fake, recall, coverage])
 
     datafame = pd.DataFrame(columns=columns, data=row_data)
@@ -60,7 +58,7 @@ def normSeparate(real, fake):
 
 from sklearn.utils import shuffle
 # TODO Refactoring once results are explained clearly
-def doExperiment():
+def doExperiment(savePlotLines):
     # Set experiment params
     iters = 1
     samples_both = 1000
@@ -81,23 +79,28 @@ def doExperiment():
 
         text_info = {"label1":"Real data", "label2": "Fake data", "save_path":f"../fig_v2/k_effect/areas_un_dim{dim}.png",
                      "title_text": f"Union normalized sum of ball area's with dimension {dim}"}
-        plotLines(dataframe["k_val"], real_normed_un,  fake_normed_un, text_info, save=True)
+        plotLines(dataframe["k_val"], real_normed_un,  fake_normed_un, text_info, save=savePlotLines)
 
         text_info = {"label1": "Real data", "label2": "Fake data",
                      "save_path": f"../fig_v2/k_effect/areas_sep_dim{dim}.png",
                      "title_text": f"Separately normalized sum of ball area's with dimension {dim}"}
-        plotLines(dataframe["k_val"], real_normed_sep, fake_normed_sep, text_info, save=True)
+        plotLines(dataframe["k_val"], real_normed_sep, fake_normed_sep, text_info, save=savePlotLines)
 
-        text_info = {"label1": "Recall", "label2": "Coverage", "save_path":f"../fig_v2/k_effect/scores_dim{dim}.png",
+        text_info = {"label1": "Coverage", "label2": "Recall", "save_path":f"../fig_v2/k_effect/scores_dim{dim}.png",
                       "title_text": f"Metric scores with dimension {dim}"}
+        print(dataframe["coverage"].mean(), dataframe["recall"].mean())
         plotLines(dataframe["k_val"], dataframe["coverage"], dataframe["recall"], text_info, save=True)
-        if dim == 2:
-            for index, k in enumerate(k_vals):
-                if index % 20 == 0:
-                    data_dict = {"real_data":[real_data], "fake_data":[fake_data], "k_val":[k], "titles":[f"K-val is {k}"]}
-                    plotting.plotInterface(data_dict, save=False, save_path="")
+        # if dim == 2:
+        #     for index, k in enumerate(k_vals):
+        #         if index % 20 == 0 or k == 999:
+        #             data_dict = {"real_data":[real_data], "fake_data":[fake_data], "k_val":[k], "titles":[f"K-val is {k}"]}
+        #             plotting.plotInterface(data_dict, save=False, save_path="")
 
 def runAll():
-    doExperiment()
+    savePlotLines = False
+    doExperiment(savePlotLines)
+
+    if savePlotLines is False:
+        plt.show()
 
 runAll()
