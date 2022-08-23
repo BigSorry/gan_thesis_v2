@@ -18,7 +18,7 @@ def plotLines(var_x, var_y1, var_y2, text_info, save=False):
     if save == True:
         plt.savefig(text_info["save_path"], bbox_inches="tight")
 
-def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs,
+def getDataframe(dimension, k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs,
                   iters, save=False):
     columns = ["iter_id", "k_val", "area_real", "area_fake",  "recall", "coverage"]
     row_data = []
@@ -28,8 +28,9 @@ def getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_ma
             boundaries_fake = distance_matrix_fake[:, k_val]
             precision, recall, density, coverage = helper.getScores(distance_matrix_pairs, boundaries_fake,
                                                                     boundaries_real, k_val)
-            area_real = np.sum(helper.getArea(boundaries_real))
-            area_fake = np.sum(helper.getArea(boundaries_fake))
+
+            area_real = np.sum(helper.getVolume(boundaries_real, dimension))
+            area_fake = np.sum(helper.getVolume(boundaries_fake, dimension))
             row_data.append([i, k_val, area_real, area_fake, recall, coverage])
 
     datafame = pd.DataFrame(columns=columns, data=row_data)
@@ -67,13 +68,13 @@ def doExperiment(savePlotLines):
     variance = 0.1
     k_vals = np.linspace(1, 999, 50, dtype=int)
     dimensions = [2, 4, 8, 12, 16, 25, 32, 512]
-    dimensions = [2, 4, 16, 32, 64]
+    dimensions = [2, 4, 8, 16, 32, 64]
     # Prep dataframe
     for dim in dimensions:
         real_data, fake_data = experiment_diverse.getDataNew(real_samples, fake_samples,
                                                              variance, dim)
         distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = helper.getDistanceMatrices(real_data, fake_data)
-        dataframe = getDataframe(k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
+        dataframe = getDataframe(dim, k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
         real_normed_un, fake_normed_un = normUnion(dataframe["area_real"], dataframe["area_fake"])
         real_normed_sep, fake_normed_sep = normSeparate(dataframe["area_real"], dataframe["area_fake"])
 
@@ -97,7 +98,7 @@ def doExperiment(savePlotLines):
         #             plotting.plotInterface(data_dict, save=False, save_path="")
 
 def runAll():
-    savePlotLines = False
+    savePlotLines = True
     doExperiment(savePlotLines)
 
     if savePlotLines is False:

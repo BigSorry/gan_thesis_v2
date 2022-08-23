@@ -110,13 +110,14 @@ def checkMinMaxDistance(real_features, fake_features, k=1):
 
     return min_distance_real, max_distances_real, min_distance_fake, max_distances_fake
 
-
-def sumBoundaries(boundaries):
-    return np.sum(boundaries)
-
 def getArea(boundaries):
     return math.pi*(boundaries**2)
 
-
+def getVolume(boundaries, dimension):
+    nominator = (np.pi**(dimension/2))
+    input_gamma = (dimension / 2) + 1
+    denominator = np.math.factorial(input_gamma - 1)
+    volume = (nominator/denominator)*(boundaries**dimension)
+    return volume
 
 
