@@ -115,9 +115,56 @@ def getArea(boundaries):
 
 def getVolume(boundaries, dimension):
     nominator = (np.pi**(dimension/2))
-    input_gamma = (dimension / 2) + 1
+    input_gamma = int((dimension / 2) + 1)
     denominator = np.math.factorial(input_gamma - 1)
     volume = (nominator/denominator)*(boundaries**dimension)
     return volume
 
+# From https://stackoverflow.com/questions/4247889/area-of-intersection-between-two-circles
+def getIntersection(x0, y0, r0, x1, y1, r1):
+    rr0 = r0 * r0
+    rr1 = r1 * r1
+    d = math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0))
 
+    # Circles do not overlap
+    if d > r1 + r0:
+        return 0
+    # Circle1 is completely inside circle0
+    elif d <= np.abs(r0 - r1) and r0 >= r1:
+        return np.pi * rr1
+    # Circle0 is completely inside circle1
+    elif d <= np.abs(r0 - r1) and r0 < r1:
+        return np.pi * rr0
+    # Circles partially overlap
+    else:
+        phi = (np.arccos((rr0 + (d * d) - rr1) / (2 * r0 * d))) * 2
+        theta = (np.arccos((rr1 + (d * d) - rr0) / (2 * r1 * d))) * 2
+        area1 = 0.5 * theta * rr1 - 0.5 * rr1 * np.sin(theta)
+        area2 = 0.5 * phi * rr0 - 0.5 * rr0 * np.sin(phi)
+        return area1 + area2
+
+def testVolumes():
+    samples = 100
+    dimension = 2
+    k_val = 2
+    mean = np.zeros(dimension)
+    cov = np.eye(dimension)
+    real_features = np.random.multivariate_normal(mean, cov, size=samples)
+    cov *= 0.1
+    fake_features = np.random.multivariate_normal(mean, cov, size=samples)
+    boundaries_real, boundaries_fake, distance_matrix_pairs = getBoundaries(real_features, fake_features, k_val)
+    for i in range(samples):
+        real_sample = real_features[i, :]
+        x0 = real_sample[0]
+        y0 = real_sample[1]
+        r0 = boundaries_real[i]
+        for j in range(samples):
+            if i != j:
+                other_sample = real_features[j, :]
+                x1 = other_sample[0]
+                y1 = other_sample[1]
+                r1 = boundaries_real[j]
+                intersection = getIntersection(x0, y0, r0, x1, y1, r1)
+                k=0
+
+testVolumes()
