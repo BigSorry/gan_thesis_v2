@@ -210,10 +210,11 @@ def distanceCheck():
 def runAll():
     # runFakeDiverse()
     # runFourClusters()
-    doModeCollapse()
+    #doModeCollapse()
     #distanceCheck()
+    #plt.show()
+    helper.doVolumeExperiment()
     plt.show()
-
 
 
 runAll()

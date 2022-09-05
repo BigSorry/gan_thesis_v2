@@ -76,10 +76,6 @@ def showScores(result_dict, save=False, save_path="", subplots=2):
         plt.tight_layout()
         fig.savefig(f"{save_path}all_results.png", dpi=600)
 
-def plotManifold(circle_samples, point_samples, circle_boundaries, text=""):
-    plotCircles(circle_samples, circle_boundaries)
-    plt.scatter(point_samples[:, 0], point_samples[:, 1], label=text, c="blue", s=2 ** 7, zorder=99, alpha=0.75)
-
 # TODO Refactoring score calculations
 def plotInterface(saved_data, save=False, save_path=""):
     # Start Plotting
@@ -130,7 +126,7 @@ def getAnnotColors(annotations):
             pass
 
 def saveHeatMap(tabular_data, rows, columns, save=False, save_path="", title_text=""):
-    plt.figure()
+    plt.figure(figsize=(14, 6))
     sns.heatmap(tabular_data,
                 cmap="RdYlGn_r",
                 xticklabels=rows,
@@ -197,3 +193,35 @@ def plotDistances(mean_data, std_data):
    plt.errorbar(dimensions, avg_difference_real, avg_difference_std, label="Mean absolute difference min-max distance real")
    plt.errorbar(dimensions, avg_difference_fake, avg_difference_fake_std, label="Mean absolute difference min-max distance fake")
    plt.legend()
+
+def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
+             recall_mask, coverage_mask, title):
+    # Start plotting
+    fig = plt.figure(figsize=(12, 4))
+    fig.suptitle(title)
+    # First subplot
+    ax1 = plt.subplot(1, 2, 1)
+    ax1.set_title("Recall manifold")
+    # Recall manifold
+    plotCircles(fake_data, boundaries_fake)
+    plt.scatter(fake_data[:, 0], fake_data[:, 1],
+                label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
+    plotAcceptRejectData(real_data, recall_mask)
+    # Position relative to first subplot
+    plt.legend(bbox_to_anchor=(1, 1.1), loc="upper left", ncol=3,
+               prop={'size': 11})
+    # setLimits(min_x, max_x, min_y, max_y)
+    # Second subplot
+    ax2 = plt.subplot(1, 2, 2, sharex=ax1, sharey=ax1)
+    ax2.set_title("Coverage manifold")
+    plt.scatter(fake_data[:, 0], fake_data[:, 1],
+                label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
+    plotAcceptRejectData(real_data, coverage_mask)
+    # Coverage manifold
+    plotCircles(real_data, boundaries_real)
+    # setLimits(min_x, max_x, min_y, max_y)
+    # if save:
+    #     plt.subplots_adjust(wspace=0.3)
+    #     plt.savefig(f"{save_path}{title.replace(' ', '_')}.png",
+    #                 dpi=300, bbox_inches='tight')
+    #     plt.close()

@@ -12,6 +12,8 @@ def plotLines(var_x, var_y1, var_y2, text_info, save=False):
     plt.plot(var_x, var_y1, label=text_info["label1"], c="blue")
     plt.plot(var_x, var_y2, label=text_info["label2"], c="red")
     plt.xlabel("K value")
+
+
     plt.ylim([0, 1.1])
     plt.xscale('log')
     plt.legend()
@@ -62,43 +64,53 @@ from sklearn.utils import shuffle
 def doExperiment(savePlotLines):
     # Set experiment params
     iters = 1
-    samples_both = 1000
+    samples_both = 5000
     fake_samples = samples_both
     real_samples = samples_both
-    variance = 0.1
+    variances = [0.1]
     k_vals = np.linspace(1, 999, 50, dtype=int)
     dimensions = [2, 4, 8, 12, 16, 25, 32, 512]
     dimensions = [2, 4, 8, 16, 32, 64]
     # Prep dataframe
-    for dim in dimensions:
-        real_data, fake_data = experiment_diverse.getDataNew(real_samples, fake_samples,
-                                                             variance, dim)
-        distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = helper.getDistanceMatrices(real_data, fake_data)
-        dataframe = getDataframe(dim, k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
-        real_normed_un, fake_normed_un = normUnion(dataframe["area_real"], dataframe["area_fake"])
-        real_normed_sep, fake_normed_sep = normSeparate(dataframe["area_real"], dataframe["area_fake"])
+    for variance in variances:
+        for dim in dimensions:
+            real_data, fake_data = experiment_diverse.getDataNew(real_samples, fake_samples,
+                                                                 variance, dim)
+            distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = helper.getDistanceMatrices(real_data, fake_data)
+            dataframe = getDataframe(dim, k_vals, distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, iters)
+            text_info = {"label1":"Real data", "label2": "Fake data", "save_path":f"../fig_v2/k_effect/areas_un_dim{dim}.png",
+                          "title_text": f"Union normalized sum of ball area's with dimension {dim}"}
 
-        text_info = {"label1":"Real data", "label2": "Fake data", "save_path":f"../fig_v2/k_effect/areas_un_dim{dim}.png",
-                     "title_text": f"Union normalized sum of ball area's with dimension {dim}"}
-        plotLines(dataframe["k_val"], real_normed_un,  fake_normed_un, text_info, save=savePlotLines)
+            plt.figure()
+            plt.title(f"Dimension is {dim} and lambda is {variance}")
+            plt.boxplot([dataframe["area_real"], dataframe["area_fake"]])
+            plt.xticks([1, 2], ["Real", "Fake"])
 
-        text_info = {"label1": "Real data", "label2": "Fake data",
-                     "save_path": f"../fig_v2/k_effect/areas_sep_dim{dim}.png",
-                     "title_text": f"Separately normalized sum of ball area's with dimension {dim}"}
-        plotLines(dataframe["k_val"], real_normed_sep, fake_normed_sep, text_info, save=savePlotLines)
+        # real_normed_un, fake_normed_un = normUnion(dataframe["area_real"], dataframe["area_fake"])
+            #real_normed_sep, fake_normed_sep = normSeparate(dataframe["area_real"], dataframe["area_fake"])
 
-        text_info = {"label1": "Coverage", "label2": "Recall", "save_path":f"../fig_v2/k_effect/scores_dim{dim}.png",
-                      "title_text": f"Metric scores with dimension {dim}"}
-        print(dataframe["coverage"].mean(), dataframe["recall"].mean())
-        plotLines(dataframe["k_val"], dataframe["coverage"], dataframe["recall"], text_info, save=True)
-        # if dim == 2:
-        #     for index, k in enumerate(k_vals):
-        #         if index % 20 == 0 or k == 999:
-        #             data_dict = {"real_data":[real_data], "fake_data":[fake_data], "k_val":[k], "titles":[f"K-val is {k}"]}
-        #             plotting.plotInterface(data_dict, save=False, save_path="")
+            # text_info = {"label1":"Real data", "label2": "Fake data", "save_path":f"../fig_v2/k_effect/areas_un_dim{dim}.png",
+            #              "title_text": f"Union normalized sum of ball area's with dimension {dim}"}
+            # plotLines(dataframe["k_val"], real_normed_un,  fake_normed_un, text_info, save=savePlotLines)
+            #
+            # text_info = {"label1": "Real data", "label2": "Fake data",
+            #              "save_path": f"../fig_v2/k_effect/areas_sep_dim{dim}.png",
+            #              "title_text": f"Separately normalized sum of ball area's with dimension {dim}"}
+            # plotLines(dataframe["k_val"], real_normed_sep, fake_normed_sep, text_info, save=savePlotLines)
+
+            # savePlotLinestext_info = {"label1": "Coverage", "label2": "Recall", "save_path":f"../fig_v2/k_effect/scores_dim{dim}.png",
+            #               "title_text": f"Metric scores with dimension {dim}"}
+            # print(dataframe["coverage"].mean(), dataframe["recall"].mean())
+            # plotLines(dataframe["k_val"], dataframe["coverage"], dataframe["recall"], text_info, save=True)
+
+            # if dim == 2:
+            #     for index, k in enumerate(k_vals):
+            #         if index % 20 == 0 or k == 999:
+            #             data_dict = {"real_data":[real_data], "fake_data":[fake_data], "k_val":[k], "titles":[f"K-val is {k}"]}
+            #             plotting.plotInterface(data_dict, save=False, save_path="")
 
 def runAll():
-    savePlotLines = True
+    savePlotLines = False
     doExperiment(savePlotLines)
 
     if savePlotLines is False:

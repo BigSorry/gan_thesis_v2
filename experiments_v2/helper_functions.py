@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualize as plotting
 from sklearn.metrics import pairwise_distances
+import experiments_v2.fake_diverse as experiment_diverse
 
 def savePickle(path, python_object):
     with open(path, 'wb') as fp:
@@ -143,28 +144,93 @@ def getIntersection(x0, y0, r0, x1, y1, r1):
         area2 = 0.5 * phi * rr0 - 0.5 * rr0 * np.sin(phi)
         return area1 + area2
 
-def testVolumes():
-    samples = 100
-    dimension = 2
-    k_val = 2
-    mean = np.zeros(dimension)
-    cov = np.eye(dimension)
-    real_features = np.random.multivariate_normal(mean, cov, size=samples)
-    cov *= 0.1
-    fake_features = np.random.multivariate_normal(mean, cov, size=samples)
-    boundaries_real, boundaries_fake, distance_matrix_pairs = getBoundaries(real_features, fake_features, k_val)
-    for i in range(samples):
-        real_sample = real_features[i, :]
+def getIntersectionSum(data, data_boundaries):
+    sample_count = data.shape[0]
+    result_sum = 0
+    for i in range(sample_count):
+        real_sample = data[i, :]
         x0 = real_sample[0]
         y0 = real_sample[1]
-        r0 = boundaries_real[i]
-        for j in range(samples):
+        r0 = data_boundaries[i]
+        for j in range(sample_count):
             if i != j:
-                other_sample = real_features[j, :]
+                other_sample = data[j, :]
                 x1 = other_sample[0]
                 y1 = other_sample[1]
-                r1 = boundaries_real[j]
+                r1 = data_boundaries[j]
                 intersection = getIntersection(x0, y0, r0, x1, y1, r1)
-                k=0
+                result_sum += intersection
 
-testVolumes()
+    return result_sum
+
+
+def doVolumeExperiment():
+    # Setup
+    samples = 5
+    dimension = 2
+    k_vals = [2**i for
+
+              i in range(11)]
+    #k_vals = np.arange(1, 100, 2)
+    print(k_vals)
+    mean = np.zeros(dimension)
+    scale_factors = [0.01, 0.1, 0.25, 0.5, 1, 2, 4, 10, 100, 1000, 10000, 10**6]
+    recalls = {i:[] for i in scale_factors}
+    coverages = {i:[] for i in scale_factors}
+    for scale_factor in scale_factors:
+        cov_real = np.eye(dimension) * scale_factor
+        cov_fake = np.eye(dimension) * (1 / scale_factor)
+        real_features = np.random.multivariate_normal(mean, cov_real, size=samples)
+        fake_features = np.random.multivariate_normal(mean, cov_fake, size=samples)
+        combined_data = np.concatenate([real_features, fake_features])
+        distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = getDistanceMatrices(real_features, fake_features)
+        for k_val in k_vals:
+            # Calculations
+            boundaries_real = distance_matrix_real[:, k_val]
+            boundaries_fake = distance_matrix_real[:, k_val]
+            precision, recall, density, coverage = getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
+            recalls[scale_factor].append(recall)
+            coverages[scale_factor].append(coverage)
+            # recall_mask, coverage_mask = getScoreMask(boundaries_real, boundaries_fake, distance_matrix_pairs)
+
+            #boundaries_combined, _, _ = getBoundaries(combined_data, combined_data, k_val)
+            # real_union_vol = np.sum(getVolume(boundaries_real, dimension))
+            # real_intersection_vol = getIntersectionSum(real_features, boundaries_real)
+            # real_vol_ratio = real_intersection_vol / real_union_vol
+            #
+            # fake_union_vol = np.sum(getVolume(boundaries_fake, dimension))
+            # fake_intersection_vol = getIntersectionSum(fake_features, boundaries_fake)
+            # fake_vol_ratio = fake_intersection_vol / fake_union_vol
+            #
+            # combined_union_vol = np.sum(getVolume(boundaries_combined, dimension))
+            # combined_intersection_vol = getIntersectionSum(combined_data, boundaries_combined)
+
+
+    # Plotting
+    # Lambda char
+    y_ticks = [f"\u03BB={scale}" for scale in scale_factors]
+    x_ticks = [f"K={k_val}" for k_val in k_vals]
+    recall_data = np.array(list((recalls.values())))
+    for index, (scale, data) in enumerate(recalls.items()):
+        plt.boxplot(list(data), positions=[index])
+    plt.xticks(range(len(scale_factors)), scale_factors)
+
+    plt.figure()
+    plt.title("Coverage")
+    y_ticks = [f"\u03BB={scale}" for scale in scale_factors]
+    x_ticks = [f"K={k_val}" for k_val in k_vals]
+    recall_data = np.array(list((recalls.values())))
+    for index, (scale, data) in enumerate(coverages.items()):
+        plt.boxplot(list(data), positions=[index])
+    plt.xticks(range(len(scale_factors)), scale_factors)
+
+    coverage_data = np.array(list((coverages.values())))
+    plotting.saveHeatMap(coverage_data, x_ticks, y_ticks, save=False, title_text="Coverage")
+
+    recall_data = np.array(list((recalls.values())))
+    plotting.saveHeatMap(recall_data, x_ticks, y_ticks, save=False, title_text="Recall")
+
+    title = f"Recall {recall} and coverage {coverage}"
+    plotting.plotData(real_features, fake_features, boundaries_real, boundaries_fake,
+                 recall_mask, coverage_mask, title)
+
