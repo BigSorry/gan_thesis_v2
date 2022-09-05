@@ -9,15 +9,16 @@ def getKParams(sample_size):
     for i in range(1, 10):
         size = int(sample_size * (i/10))
         vals.append(size)
-    vals.append(sample_size-1)
+    if vals[len(vals) - 1] < (sample_size - 1):
+        vals.append(sample_size-1)
     return vals
 
 def doVolumeExperiment():
     # Setup
-    sample_sizes = [10, 100, 1000, 2000]
+    sample_sizes = [10, 100, 1000]
     dimension = 2
     mean = np.zeros(dimension)
-    scale_factors = [0.01, 0.1, 1, 10, 100, 1000, 10000, 10**6]
+    scale_factors = [0.01, 0.1, 1, 10, 100]
     recalls = {i:[] for i in scale_factors}
     coverages = {i:[] for i in scale_factors}
     columns = ["sample_size", "dimension", "lambda", "k_val", "recall", "coverage"]
@@ -26,8 +27,8 @@ def doVolumeExperiment():
         k_vals = getKParams(samples)
         print(k_vals)
         for scale_factor in scale_factors:
-            cov_real = np.eye(dimension) * scale_factor
-            cov_fake = np.eye(dimension)
+            cov_real = np.eye(dimension)
+            cov_fake = np.eye(dimension) * scale_factor
             real_features = np.random.multivariate_normal(mean, cov_real, size=samples)
             fake_features = np.random.multivariate_normal(mean, cov_fake, size=samples)
             distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
@@ -43,14 +44,20 @@ def doVolumeExperiment():
 
     datafame = pd.DataFrame(columns=columns, data=row_data)
     for samples in sample_sizes:
-        select_data = datafame.loc[datafame["sample_size"] == samples, :]
-        x = np.round(select_data["k_val"] / samples, 2)
-        recalls = select_data["recall"].values
-        coverages = select_data["coverage"].values
+        for scale in scale_factors:
+            select_data = datafame.loc[(datafame["sample_size"] == samples) &
+                                       (datafame["lambda"] == scale) , :]
+            grouped = select_data.groupby(["k_val"])
+            x_ticks = np.round(select_data["k_val"] / samples, 2)
+            x = np.arange(x_ticks.shape[0]) + 1
+            recalls = select_data["recall"]
+            coverages = select_data["coverage"]
 
-        plt.figure()
-        plt.title(samples)
-        plt.bar(x, recalls,  label='Recall')
-        plt.bar(x, coverages, label='Coverages')
+            plt.figure()
+            plt.title(f"Sample count {samples} and lambda is {scale}")
+            plt.bar(x-0.1, recalls, width=0.3, label="Recall")
+            plt.bar(x+0.1, coverages, width=0.3, label="Coverage")
+            plt.xticks(x, x_ticks)
+            plt.xlabel(f"k val / samples, total samples {samples}")
 
 
