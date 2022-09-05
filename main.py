@@ -2,6 +2,7 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import experiments_v2.sample_experiment as sample_experiment
 import experiments_v2.fake_diverse as experiment_diverse
 import experiments_v2.coverage_test as experiment3
 import experiments_v2.uniform_test as experiment_uniform
@@ -127,7 +128,7 @@ def testExperiment():
 
 def createData(k_vals, variances, dimensions, real_samples, fake_samples, iters):
     columns = ["variance", "dimension", "boundaries_real", "boundaries_fake",
-              "max_distances_real", "max_distances_fake", "recall", "coverage"]
+               "max_distances_real", "max_distances_fake", "recall", "coverage"]
     row_data = []
     for k_id, k_val in enumerate(k_vals):
         for variance_id, variance in enumerate(variances):
@@ -213,7 +214,7 @@ def runAll():
     #doModeCollapse()
     #distanceCheck()
     #plt.show()
-    helper.doVolumeExperiment()
+    sample_experiment.doVolumeExperiment()
     plt.show()
 
 

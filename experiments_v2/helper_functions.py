@@ -166,23 +166,23 @@ def getIntersectionSum(data, data_boundaries):
 
 def doVolumeExperiment():
     # Setup
-    samples = 5
+    samples = 2048*2 + 1
     dimension = 2
     k_vals = [2**i for
 
-              i in range(11)]
+              i in range(13)]
     #k_vals = np.arange(1, 100, 2)
     print(k_vals)
     mean = np.zeros(dimension)
-    scale_factors = [0.01, 0.1, 0.25, 0.5, 1, 2, 4, 10, 100, 1000, 10000, 10**6]
+    scale_factors = [0.01, 0.1, 1, 10, 100, 1000, 10000, 10**6]
     recalls = {i:[] for i in scale_factors}
     coverages = {i:[] for i in scale_factors}
     for scale_factor in scale_factors:
         cov_real = np.eye(dimension) * scale_factor
-        cov_fake = np.eye(dimension) * (1 / scale_factor)
+        cov_fake = np.eye(dimension)
         real_features = np.random.multivariate_normal(mean, cov_real, size=samples)
         fake_features = np.random.multivariate_normal(mean, cov_fake, size=samples)
-        combined_data = np.concatenate([real_features, fake_features])
+        #combined_data = np.concatenate([real_features, fake_features])
         distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = getDistanceMatrices(real_features, fake_features)
         for k_val in k_vals:
             # Calculations
@@ -191,19 +191,9 @@ def doVolumeExperiment():
             precision, recall, density, coverage = getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
             recalls[scale_factor].append(recall)
             coverages[scale_factor].append(coverage)
-            # recall_mask, coverage_mask = getScoreMask(boundaries_real, boundaries_fake, distance_matrix_pairs)
+            #recall_mask, coverage_mask = getScoreMask(boundaries_real, boundaries_fake, distance_matrix_pairs)
 
-            #boundaries_combined, _, _ = getBoundaries(combined_data, combined_data, k_val)
-            # real_union_vol = np.sum(getVolume(boundaries_real, dimension))
-            # real_intersection_vol = getIntersectionSum(real_features, boundaries_real)
-            # real_vol_ratio = real_intersection_vol / real_union_vol
-            #
-            # fake_union_vol = np.sum(getVolume(boundaries_fake, dimension))
-            # fake_intersection_vol = getIntersectionSum(fake_features, boundaries_fake)
-            # fake_vol_ratio = fake_intersection_vol / fake_union_vol
-            #
-            # combined_union_vol = np.sum(getVolume(boundaries_combined, dimension))
-            # combined_intersection_vol = getIntersectionSum(combined_data, boundaries_combined)
+
 
 
     # Plotting
@@ -230,7 +220,7 @@ def doVolumeExperiment():
     recall_data = np.array(list((recalls.values())))
     plotting.saveHeatMap(recall_data, x_ticks, y_ticks, save=False, title_text="Recall")
 
-    title = f"Recall {recall} and coverage {coverage}"
-    plotting.plotData(real_features, fake_features, boundaries_real, boundaries_fake,
-                 recall_mask, coverage_mask, title)
+    # title = f"Recall {recall} and coverage {coverage}"
+    # plotting.plotData(real_features, fake_features, boundaries_real, boundaries_fake,
+    #              recall_mask, coverage_mask, title)
 
