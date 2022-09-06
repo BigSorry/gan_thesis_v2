@@ -44,7 +44,10 @@ def sampleExperiment():
     datafame = pd.DataFrame(columns=columns, data=row_data)
 
     show_box=True
-    show_map=False
+    show_map=True
+    # PC paths
+    path_map = "C:/Users/Lex/OneDrive/plots_thesis/pc/heatmap/"
+    path_box = "C:/Users/Lex/OneDrive/plots_thesis/pc/boxplot/"
     for samples in sample_sizes:
             select_data = datafame.loc[datafame["sample_size"] == samples, :]
             if show_box:
@@ -56,8 +59,10 @@ def sampleExperiment():
                     coverage = group["coverage"].values
                     recalls.append(recall)
                     coverages.append(coverage)
-                plotting.plotBox(recalls, f"Recall with sample size {samples}")
-                plotting.plotBox(coverages, f"Coverages with sample size {samples}")
+                plotting.plotBox(recalls, f"Recall with sample size {samples}",
+                                 save=True, save_path=path_box+f"recall_samples{samples}.png")
+                plotting.plotBox(coverages, f"Coverages with sample size {samples}",
+                                 save=True, save_path=path_box+f"coverage_samples{samples}.png")
 
             if show_map:
                 recall_pivot = pd.pivot_table(select_data, values='recall', index=['lambda'],
@@ -65,8 +70,10 @@ def sampleExperiment():
                 coverage_pivot = pd.pivot_table(select_data, values='coverage', index=['lambda'],
                                               columns=['k_val'], aggfunc=np.mean)
 
-                plotting.HeatMapPivot(recall_pivot, title_text=f"Recall with sample size {samples}")
-                plotting.HeatMapPivot(coverage_pivot, title_text=f"Coverage with sample size {samples}")
+                plotting.HeatMapPivot(recall_pivot, title_text=f"Recall with sample size {samples}",
+                                      save=True, save_path=path_map+f"recall_samples{samples}.png")
+                plotting.HeatMapPivot(coverage_pivot, title_text=f"Coverage with sample size {samples}",
+                                      save=True, save_path=path_map+f"coverage_samples{samples}.png")
 
 
 

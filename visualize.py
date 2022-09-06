@@ -238,19 +238,15 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     #                 dpi=300, bbox_inches='tight')
     #     plt.close()
 
-def plotBars(x_data, recalls, coverages, title_text):
-    x = np.arange(x_data.shape[0]) + 1
-    plt.figure()
-    plt.title(title_text)
-    plt.bar(x - 0.1, recalls, width=0.3, label="Recall")
-    plt.bar(x + 0.1, coverages, width=0.3, label="Coverage")
-    plt.xticks(x, x_data)
-    plt.xlabel(f"k val / samples")
-    plt.legend()
 
-def plotBox(data, title_text):
+def plotBox(data, title_text, save=False, save_path=""):
     plt.figure()
     plt.title(title_text)
     plt.boxplot(data)
     plt.xlabel("k_value")
     plt.ylabel("score")
+
+    if save:
+        plt.subplots_adjust(wspace=0.3)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
