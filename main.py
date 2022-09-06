@@ -101,7 +101,7 @@ def doModeCollapse():
     plotting.plotDataFrame(datafame, "coverage")
     plotting.plotDataFrame(datafame, "recall")
 
-def testExperiment():
+def doExperiment():
     iters = 1
     total_samples = 40
     clusters = 4
@@ -214,7 +214,7 @@ def runAll():
     #doModeCollapse()
     #distanceCheck()
     #plt.show()
-    sample_experiment.doVolumeExperiment()
+    sample_experiment.sampleExperiment()
     plt.show()
 
 

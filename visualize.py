@@ -125,6 +125,18 @@ def getAnnotColors(annotations):
         for j in range(annotations.shape[1]):
             pass
 
+def HeatMapPivot(pivot_table, title_text="", save=False, save_path=""):
+    plt.figure(figsize=(14, 6))
+    sns.heatmap(pivot_table, cmap="RdYlGn_r", annot=True,
+                annot_kws={"color": "black", "backgroundcolor": "white"}, vmin=0, vmax=1)
+
+    plt.title(title_text)
+    plt.yticks(rotation=0)
+
+    if save:
+        plt.subplots_adjust(wspace=0.3)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
 def saveHeatMap(tabular_data, rows, columns, save=False, save_path="", title_text=""):
     plt.figure(figsize=(14, 6))
     sns.heatmap(tabular_data,
@@ -225,3 +237,20 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     #     plt.savefig(f"{save_path}{title.replace(' ', '_')}.png",
     #                 dpi=300, bbox_inches='tight')
     #     plt.close()
+
+def plotBars(x_data, recalls, coverages, title_text):
+    x = np.arange(x_data.shape[0]) + 1
+    plt.figure()
+    plt.title(title_text)
+    plt.bar(x - 0.1, recalls, width=0.3, label="Recall")
+    plt.bar(x + 0.1, coverages, width=0.3, label="Coverage")
+    plt.xticks(x, x_data)
+    plt.xlabel(f"k val / samples")
+    plt.legend()
+
+def plotBox(data, title_text):
+    plt.figure()
+    plt.title(title_text)
+    plt.boxplot(data)
+    plt.xlabel("k_value")
+    plt.ylabel("score")

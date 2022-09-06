@@ -13,51 +13,61 @@ def getKParams(sample_size):
         vals.append(sample_size-1)
     return vals
 
-def doVolumeExperiment():
+import seaborn as sns
+def sampleExperiment():
     # Setup
-    sample_sizes = [10, 100, 1000]
+    iters = 2
     dimension = 2
-    mean = np.zeros(dimension)
-    scale_factors = [0.01, 0.1, 1, 10, 100]
-    recalls = {i:[] for i in scale_factors}
-    coverages = {i:[] for i in scale_factors}
-    columns = ["sample_size", "dimension", "lambda", "k_val", "recall", "coverage"]
+    sample_sizes = [100, 1000]
+    scale_factors = [0.01, 0.1, 1, 10, 1000]
+    columns = ["iter", "sample_size", "dimension", "lambda", "k_val", "recall", "coverage"]
     row_data = []
-    for samples in sample_sizes:
-        k_vals = getKParams(samples)
-        print(k_vals)
-        for scale_factor in scale_factors:
-            cov_real = np.eye(dimension)
-            cov_fake = np.eye(dimension) * scale_factor
-            real_features = np.random.multivariate_normal(mean, cov_real, size=samples)
-            fake_features = np.random.multivariate_normal(mean, cov_fake, size=samples)
-            distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
-            for k_val in k_vals:
-                # Calculations
-                boundaries_real = distance_matrix_real[:, k_val]
-                boundaries_fake = distance_matrix_real[:, k_val]
-                precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
-                recalls[scale_factor].append(recall)
-                coverages[scale_factor].append(coverage)
-                row = [samples, dimension, scale_factor, k_val, recall, coverage]
-                row_data.append(row)
+    mean = np.zeros(dimension)
+    for iter in range(iters):
+        for samples in sample_sizes:
+            k_vals = getKParams(samples)
+            print(k_vals)
+            for scale_factor in scale_factors:
+                cov_real = np.eye(dimension)
+                cov_fake = np.eye(dimension) * scale_factor
+                real_features = np.random.multivariate_normal(mean, cov_real, size=samples)
+                fake_features = np.random.multivariate_normal(mean, cov_fake, size=samples)
+                distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
+                for k_val in k_vals:
+                    # Calculations
+                    boundaries_real = distance_matrix_real[:, k_val]
+                    boundaries_fake = distance_matrix_real[:, k_val]
+                    precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
+                    row = [iter, samples, dimension, scale_factor, k_val, recall, coverage]
+                    row_data.append(row)
 
     datafame = pd.DataFrame(columns=columns, data=row_data)
-    for samples in sample_sizes:
-        for scale in scale_factors:
-            select_data = datafame.loc[(datafame["sample_size"] == samples) &
-                                       (datafame["lambda"] == scale) , :]
-            grouped = select_data.groupby(["k_val"])
-            x_ticks = np.round(select_data["k_val"] / samples, 2)
-            x = np.arange(x_ticks.shape[0]) + 1
-            recalls = select_data["recall"]
-            coverages = select_data["coverage"]
 
-            plt.figure()
-            plt.title(f"Sample count {samples} and lambda is {scale}")
-            plt.bar(x-0.1, recalls, width=0.3, label="Recall")
-            plt.bar(x+0.1, coverages, width=0.3, label="Coverage")
-            plt.xticks(x, x_ticks)
-            plt.xlabel(f"k val / samples, total samples {samples}")
+    show_box=True
+    show_map=False
+    for samples in sample_sizes:
+            select_data = datafame.loc[datafame["sample_size"] == samples, :]
+            if show_box:
+                grouped_data = select_data.groupby(["k_val"])
+                recalls = []
+                coverages = []
+                for name, group in grouped_data:
+                    recall = group["recall"].values
+                    coverage = group["coverage"].values
+                    recalls.append(recall)
+                    coverages.append(coverage)
+                plotting.plotBox(recalls, f"Recall with sample size {samples}")
+                plotting.plotBox(coverages, f"Coverages with sample size {samples}")
+
+            if show_map:
+                recall_pivot = pd.pivot_table(select_data, values='recall', index=['lambda'],
+                        columns=['k_val'], aggfunc=np.mean)
+                coverage_pivot = pd.pivot_table(select_data, values='coverage', index=['lambda'],
+                                              columns=['k_val'], aggfunc=np.mean)
+
+                plotting.HeatMapPivot(recall_pivot, title_text=f"Recall with sample size {samples}")
+                plotting.HeatMapPivot(coverage_pivot, title_text=f"Coverage with sample size {samples}")
+
+
 
 
