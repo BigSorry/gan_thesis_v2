@@ -42,11 +42,13 @@ def getData(iters, dimensions, sample_sizes, lambda_factors):
     dataframe = pd.DataFrame(columns=columns, data=row_data)
     return dataframe
 
-def plotExperiment(dataframe, sample_size, show_boxplot,
+def plotExperiment(dataframe, sample_size, dimension, show_boxplot,
                    show_map, path_box, path_map):
-    effective_sample_size = sample_size / dataframe["dimension"].iloc[0]
-    recall_text = f"Recall with sample size {sample_size} with ess {effective_sample_size}"
-    coverage_text = f"Recall with sample size {sample_size} with ess {effective_sample_size}"
+    effective_sample_size = sample_size / dimension
+    recall_text = f"Recall with sample size {sample_size}, dimension {dimension}, and ess {effective_sample_size}"
+    coverage_text = f"Recall with sample size {sample_size}, dimension {dimension}, and ess {effective_sample_size}"
+    recall_file = f"recall_samples{sample_size}_dim{dimension}.png"
+    coverage_file = f"coverage_samples{sample_size}_dim{dimension}.png"
     if show_boxplot:
         grouped_data = dataframe.groupby(["k_val"])
         recalls = []
@@ -60,9 +62,9 @@ def plotExperiment(dataframe, sample_size, show_boxplot,
             xticks.append(k_val)
 
         plotting.plotBox(recalls, xticks, recall_text,
-                         save=True, save_path=path_box+f"recall_samples{sample_size}.png")
+                         save=True, save_path=path_box+recall_file)
         plotting.plotBox(coverages, xticks, coverage_text,
-                         save=True, save_path=path_box+f"coverage_samples{sample_size}.png")
+                         save=True, save_path=path_box+coverage_file)
 
     if show_map:
         recall_pivot = pd.pivot_table(dataframe, values='recall', index=['lambda'],
@@ -71,9 +73,9 @@ def plotExperiment(dataframe, sample_size, show_boxplot,
                                       columns=['k_val'], aggfunc=np.mean)
 
         plotting.HeatMapPivot(recall_pivot, title_text=recall_text,
-                              save=True, save_path=path_map+f"recall_samples{sample_size}.png")
+                              save=True, save_path=path_map+recall_file)
         plotting.HeatMapPivot(coverage_pivot, title_text=coverage_text,
-                              save=True, save_path=path_map+f"coverage_samples{sample_size}.png")
+                              save=True, save_path=path_map+coverage_file)
 
 
 import seaborn as sns
@@ -96,7 +98,7 @@ def sampleExperiment():
         for dimension in dimensions:
                 select_data = dataframe.loc[(dataframe["sample_size"] == sample_size) &
                                             (dataframe["dimension"] == dimension) , :]
-                plotExperiment(select_data, sample_size, show_box,
+                plotExperiment(select_data, sample_size, dimension, show_box,
                                show_map, path_box, path_map)
 
 
