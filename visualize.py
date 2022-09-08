@@ -239,11 +239,12 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     #     plt.close()
 
 
-def plotBox(data, title_text, save=False, save_path=""):
+def plotBox(data, xticks, title_text, save=False, save_path=""):
     plt.figure()
     plt.title(title_text)
     plt.boxplot(data)
     plt.xlabel("k_value")
+    plt.xticks(np.arange(len(data)) + 1, xticks)
     plt.ylabel("score")
 
     if save:
