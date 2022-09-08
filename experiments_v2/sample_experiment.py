@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import visualize as plotting
 import experiments_v2.helper_functions as util
 
-def getKParams(sample_size):
+def getKParams(sample_size, max_k, step_size=10):
     vals = []
-    for i in range(1, 10):
-        size = int(sample_size * (i/10))
+    for i in range(1, max_k, step_size):
+        size = i
         vals.append(size)
     if vals[len(vals) - 1] < (sample_size - 1):
         vals.append(sample_size-1)
@@ -20,7 +20,7 @@ def getData(iters, dimension, sample_sizes, lambda_factors):
     mean = np.zeros(dimension)
     for iter in range(iters):
         for samples in sample_sizes:
-            k_vals = getKParams(samples)
+            k_vals = getKParams(samples, max_k=int(samples), step_size=20)
             print(k_vals)
             for scale_factor in lambda_factors:
                 cov_real = np.eye(dimension)
@@ -76,9 +76,9 @@ import seaborn as sns
 def sampleExperiment():
     # Data Setup
     iters = 2
-    dimension = 2
-    sample_sizes = [100, 1000]
-    lambda_factors = [0.01, 0.1, 1, 10, 1000]
+    dimension = 64
+    sample_sizes = [500, 1000]
+    lambda_factors = [0.01, 0.1, 10, 100]
     dataframe = getData(iters, dimension, sample_sizes, lambda_factors)
 
     show_box=True
