@@ -82,23 +82,94 @@ import seaborn as sns
 def sampleExperiment():
     # Data Setup
     iters = 2
-    dimensions = [2, 16, 32]
-    sample_sizes = [500, 1000]
+    dimensions = [2, 4, 8, 16, 32, 64]
+    sample_sizes = [1000, 2000, 4000, 8000]
     lambda_factors = [0.01, 0.1, 10, 100]
-    dataframe = getData(iters, dimensions, sample_sizes, lambda_factors)
+    save_data = True
+    path_data = "C:/Users/Lex/OneDrive/dataframe/dataframe.pickle"
+    if save_data:
+        dataframe = getData(iters, dimensions, sample_sizes, lambda_factors)
+        util.savePickle(path_data, dataframe)
+    else:
+        dataframe = util.readPickle(path_data)
 
     show_box=True
     show_map=True
     # PC paths
     path_map = "C:/Users/Lex/OneDrive/plots_thesis/pc/heatmap/"
     path_box = "C:/Users/Lex/OneDrive/plots_thesis/pc/boxplot/"
-    path_map = "C:/Users/lexme/OneDrive/plots_thesis/laptop/heatmap/"
-    path_box = "C:/Users/lexme/OneDrive/plots_thesis/laptop/boxplot/"
+    # path_map = "C:/Users/lexme/OneDrive/plots_thesis/laptop/heatmap/"
+    # path_box = "C:/Users/lexme/OneDrive/plots_thesis/laptop/boxplot/"
     for sample_size in sample_sizes:
         for dimension in dimensions:
                 select_data = dataframe.loc[(dataframe["sample_size"] == sample_size) &
                                             (dataframe["dimension"] == dimension) , :]
                 plotExperiment(select_data, sample_size, dimension, show_box,
                                show_map, path_box, path_map)
+
+
+def checkData():
+    path_data = "C:/Users/Lex/OneDrive/dataframe/dataframe.pickle"
+    dataframe = util.readPickle(path_data)
+    sample_sizes = dataframe["sample_size"].unique()
+    dimensions = dataframe["dimension"].unique()
+    median_recalls = np.zeros((sample_sizes.shape[0], dimensions.shape[0]))
+    median_coverages = np.zeros((sample_sizes.shape[0], dimensions.shape[0]))
+    for sample_id, sample_size in enumerate(sample_sizes):
+        for dimension_id, dimension in enumerate(dimensions):
+            select_data = dataframe.loc[(dataframe["sample_size"] == sample_size) &
+                                        (dataframe["dimension"] == dimension), :]
+            median_recall = select_data["recall"].std()
+            median_coverage = select_data["coverage"].std()
+            median_recalls[sample_id, dimension_id] = median_recall
+            median_coverages[sample_id, dimension_id] = median_coverage
+
+    plotting.saveHeatMap(median_recalls, dimensions, sample_sizes, title_text="Recall")
+    plotting.saveHeatMap(median_coverages, dimensions, sample_sizes, title_text="Coverage")
+
+def checkDistancesData():
+    iters = 2
+    dimensions = [64]
+    sample_sizes = [1000]
+    lambda_factors = [0.1]
+    k_vals = [1, 50, 100, 500]
+    for samples in sample_sizes:
+        #k_vals = getKParams(samples, max_k=int(samples), step_size=20)
+        for dimension in dimensions:
+            mean_vec = np.zeros(dimension)
+            for scale_factor in lambda_factors:
+                index = 0
+                for k in k_vals:
+                    cov_real = np.eye(dimension)
+                    cov_fake = np.eye(dimension) * scale_factor
+                    real_features = np.random.multivariate_normal(mean_vec, cov_real, size=samples)
+                    fake_features = np.random.multivariate_normal(mean_vec, cov_fake, size=samples)
+                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(
+                        real_features, fake_features)
+                    boundaries_real = distance_matrix_real[:, k]
+                    boundaries_fake = distance_matrix_fake[:, k]
+
+                    columns_sorted = np.sort(distance_matrix_pairs, axis=0)
+                    rows_sorted = np.sort(distance_matrix_pairs, axis=1)
+                    fake_between = columns_sorted[k, :]
+                    real_between = rows_sorted[:, k]
+                    precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake,
+                                                                          boundaries_real, k)
+
+
+                    print(recall, coverage)
+                    fig, ax = plt.subplots(2,2, sharey=True)
+                    fig.suptitle(f"Samples is {samples} and dimension is {dimension} and K_val is {k}"
+                                 f"\n \n Coverage is {coverage:.2f} and Recall is {recall:.2f}")
+                    ax = ax.flatten()
+                    ax[0].boxplot(boundaries_real.flatten(), positions=[index])
+                    ax[0].set_title("Boundaries real distances")
+                    ax[1].boxplot(real_between.flatten(), positions=[index])
+                    ax[2].set_title("Boundaries fake distances")
+                    ax[2].boxplot(boundaries_fake.flatten(), positions=[index])
+                    ax[3].boxplot(fake_between.flatten(), positions=[index])
+                    index+=1
+
+                plt.xticks(np.arange(len(lambda_factors))+1, lambda_factors)
 
 

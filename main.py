@@ -214,7 +214,8 @@ def runAll():
     #doModeCollapse()
     #distanceCheck()
     #plt.show()
-    sample_experiment.sampleExperiment()
+    #sample_experiment.sampleExperiment()
+    sample_experiment.checkDistancesData()
     plt.show()
 
 
