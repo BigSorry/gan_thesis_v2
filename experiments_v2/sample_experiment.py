@@ -129,10 +129,10 @@ def checkData():
 
 def checkDistancesData():
     iters = 2
-    dimensions = [64]
+    dimensions = [2, 64]
     sample_sizes = [1000]
-    lambda_factors = [0.1]
-    k_vals = [1, 50, 100, 500]
+    lambda_factors = [0.01, 1000]
+    k_vals = [1 , 999]
     for samples in sample_sizes:
         #k_vals = getKParams(samples, max_k=int(samples), step_size=20)
         for dimension in dimensions:
@@ -152,6 +152,8 @@ def checkDistancesData():
                     columns_sorted = np.sort(distance_matrix_pairs, axis=0)
                     rows_sorted = np.sort(distance_matrix_pairs, axis=1)
                     fake_between = columns_sorted[k, :]
+
+
                     real_between = rows_sorted[:, k]
                     precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake,
                                                                           boundaries_real, k)
@@ -159,15 +161,18 @@ def checkDistancesData():
 
                     print(recall, coverage)
                     fig, ax = plt.subplots(2,2, sharey=True)
-                    fig.suptitle(f"Samples is {samples} and dimension is {dimension} and K_val is {k}"
+                    fig.suptitle(f"Samples is {samples} and dimension is {dimension}, "
+                                 f"lambda is {scale_factor} and K_val is {k}"
                                  f"\n \n Coverage is {coverage:.2f} and Recall is {recall:.2f}")
                     ax = ax.flatten()
                     ax[0].boxplot(boundaries_real.flatten(), positions=[index])
                     ax[0].set_title("Boundaries real distances")
-                    ax[1].boxplot(real_between.flatten(), positions=[index])
+                    ax[1].boxplot(fake_between.flatten(), positions=[index])
+                    ax[1].set_title("kth real neighbour for fake samples")
                     ax[2].set_title("Boundaries fake distances")
                     ax[2].boxplot(boundaries_fake.flatten(), positions=[index])
-                    ax[3].boxplot(fake_between.flatten(), positions=[index])
+                    ax[3].set_title("kth fake neighbour for real samples")
+                    ax[3].boxplot(real_between.flatten(), positions=[index])
                     index+=1
 
                 plt.xticks(np.arange(len(lambda_factors))+1, lambda_factors)

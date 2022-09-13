@@ -85,6 +85,8 @@ def getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val):
     density = (1. / float(k_val)) * (distance_matrix_pairs < np.expand_dims(boundaries_real, axis=1)).sum(
         axis=0).mean()
     coverage = (distance_matrix_pairs.min(axis=1) < boundaries_real).mean()
+    testing = np.expand_dims(boundaries_real, axis=0)
+    t1 = (distance_matrix_pairs < np.expand_dims(boundaries_real, axis=1)).any(axis=0)
 
     return precision, recall, density, coverage
 

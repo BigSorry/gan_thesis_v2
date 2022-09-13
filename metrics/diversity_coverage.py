@@ -9,8 +9,6 @@ def getDensityRecall(real_features, fake_features, k):
     distance_matrix_pairs = pairwise_distances(real_features, fake_features, metric='euclidean')
     boundaries_real = distance_matrix_real[:, k]
 
-
-
     # Code reference
     # https://github.com/clovaai/generative-evaluation-prdc/blob/master/prdc/prdc.py
     density = (1. / float(k)) * (distance_matrix_pairs < np.expand_dims(boundaries_real, axis=1)).sum(axis=0).mean()
