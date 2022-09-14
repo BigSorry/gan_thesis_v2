@@ -13,9 +13,11 @@ def getPrecisionRecall(real_features, fake_features, k):
 
     # Code reference
     # https://github.com/clovaai/generative-evaluation-prdc/blob/master/prdc/prdc.py
-    # Column comparisons for fake samples vs boundaries real
+    # Row collapses -> left with Columns which are true if the fake samples distance to a real samples is at
+    # least smaller than one real neighbours distance
     precision = (distance_matrix_pairs < np.expand_dims(boundaries_real, axis=1)).any(axis=0).mean()
-    # Row comparisons for real samples vs boundaries fake
+    # Columns collapses -> left with rows which are true if the real samples distance to a fake samples is at
+    # least smaller than one fakes neighbours distance
     recall = (distance_matrix_pairs < np.expand_dims(boundaries_fake, axis=0)).any(axis=1).mean()
 
     return np.array([precision, recall])

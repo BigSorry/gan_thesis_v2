@@ -215,7 +215,7 @@ def runAll():
     #distanceCheck()
     #plt.show()
     #sample_experiment.sampleExperiment()
-    sample_experiment.checkDistancesData()
+    sample_experiment.explainProblem()
     plt.show()
 
 

@@ -24,13 +24,6 @@ def setLimits(min_x, max_x, min_y, max_y):
     plt.xlim([min_x, max_x])
     plt.ylim([min_y, max_y])
 
-def plotData(real_features, fake_features, radius):
-    plt.title("Real and Fake data")
-    plt.scatter(real_features[:, 0], real_features[:, 1], label="real data", c="r")
-    all_data = np.concatenate([real_features, fake_features], axis=0)
-    setLimits(all_data[:, 0], all_data[:, 1], radius)
-    plt.legend()
-
 def plotCircles(data, boundaries):
     alpha_val = 0.2
     for index, sample in enumerate(data):
@@ -76,49 +69,6 @@ def showScores(result_dict, save=False, save_path="", subplots=2):
         plt.tight_layout()
         fig.savefig(f"{save_path}all_results.png", dpi=600)
 
-# TODO Refactoring score calculations
-def plotInterface(saved_data, save=False, save_path=""):
-    # Start Plotting
-    for i in range(len(saved_data["real_data"])):
-        real_features = saved_data["real_data"][i]
-        fake_features = saved_data["fake_data"][i]
-        k_val = saved_data["k_val"][i]
-        title = saved_data["titles"][i]
-        # Get computations for current data
-        boundaries_real, boundaries_fake, distance_matrix_pairs = helper.getBoundaries(real_features, fake_features, k_val)
-        recall_mask, coverage_mask = helper.getScoreMask(boundaries_real, boundaries_fake, distance_matrix_pairs)
-        precision, recall, density, coverage = helper.getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
-        result_dict = {"coverage": coverage, "recall": recall}
-        # Start plotting
-        fig = plt.figure(figsize=(16, 4))
-        fig.suptitle(title)
-        # First subplot
-        ax1 = plt.subplot(1, 3, 1)
-        ax1.set_title("Recall manifold")
-        # Recall manifold
-        plotManifold(fake_features, fake_features, boundaries_fake, text="Fake Samples")
-        plotAcceptRejectData(real_features, recall_mask)
-        # Position relative to first subplot
-        plt.legend(bbox_to_anchor=(1, 1.2), loc="upper left", ncol=3,
-                prop={'size': 11})
-        #setLimits(min_x, max_x, min_y, max_y)
-        # Second subplot
-        ax2 = plt.subplot(1, 3, 2)
-        ax2.set_title("Coverage manifold")
-        # Coverage manifold
-        plotManifold(real_features, fake_features, boundaries_real, text="Fake Samples")
-        plotAcceptRejectData(real_features, coverage_mask)
-        #setLimits(min_x, max_x, min_y, max_y)
-        # Third subplot figure
-        plt.subplot(1, 3, 3)
-        plotScores(result_dict)
-
-        if save:
-            plt.subplots_adjust(wspace=0.3)
-            plt.savefig(f"{save_path}{title.replace(' ', '_')}.png",
-                        dpi=300,bbox_inches='tight')
-            plt.close()
-
 def getAnnotColors(annotations):
     color_map = []
     for i in range(annotations.shape[0]):
@@ -163,7 +113,6 @@ def plotDistanceHisto(real, fake, title):
     ax1.set_title("Real boundaries")
     plt.hist(real, density=True)
 
-
     ax2 = plt.subplot(1, 2, 2, sharex=ax1)
     ax2.set_title("Fake boundaries")
     plt.hist(fake, density=True)
@@ -175,8 +124,6 @@ def plotDataFrame(dataframe, metric_name):
         k_vals = group["k_val"].unique()
         rows =[f"K={k_val}" for k_val in k_vals]
         columns = [f"\u03BB={var}" for var in variances]
-
-
         cell_data = group.pivot(index="variance", columns="k_val", values=metric_name)
         title_text = f"{metric_name}, dimension is {name}"
         saveHeatMap(cell_data.values, rows, columns, save=True, save_path=f"./fig_v2/mode_drop/{title_text}.png", title_text=title_text)
@@ -220,11 +167,11 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
                 label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
     plotAcceptRejectData(real_data, recall_mask)
     # Position relative to first subplot
-    plt.legend(bbox_to_anchor=(1, 1.1), loc="upper left", ncol=3,
+    plt.legend(bbox_to_anchor=(0, 1.1), loc="upper left", ncol=1,
                prop={'size': 11})
     # setLimits(min_x, max_x, min_y, max_y)
     # Second subplot
-    ax2 = plt.subplot(1, 2, 2, sharex=ax1, sharey=ax1)
+    ax2 = plt.subplot(1, 2, 2)
     ax2.set_title("Coverage manifold")
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
                 label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
@@ -251,3 +198,4 @@ def plotBox(data, xticks, title_text, save=False, save_path=""):
         plt.subplots_adjust(wspace=0.3)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
+
