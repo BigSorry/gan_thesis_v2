@@ -179,18 +179,20 @@ def checkDistancesData():
 def explainProblem():
     iters = 2
     dimensions = [2]
-    sample_sizes = [100]
-    lambda_factors = [1000]
+    sample_sizes = [10]
+    lambda_factors = [0.01]
     k_vals = [sample_sizes[0]-1]
+    show_box = True
+    show_points = True
     for samples in sample_sizes:
         for dimension in dimensions:
             mean_vec = np.zeros(dimension)
             for scale_factor in lambda_factors:
-                index = 0
                 for k in k_vals:
+                    mean_real = mean_vec
                     cov_real = np.eye(dimension)
                     cov_fake = np.eye(dimension) * scale_factor
-                    real_features = np.random.multivariate_normal(mean_vec, cov_real, size=samples)
+                    real_features = np.random.multivariate_normal(mean_real, cov_real, size=samples)
                     fake_features = np.random.multivariate_normal(mean_vec, cov_fake, size=samples)
                     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(
                         real_features, fake_features)
@@ -200,23 +202,37 @@ def explainProblem():
                     rows_sorted = np.sort(distance_matrix_pairs, axis=1)
                     fakes_real_neighbour = columns_sorted[k, :]
                     reals_fake_neighbour = rows_sorted[:, k]
-                    precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake,
-                                                                          boundaries_real, k)
-                    recall_mask, coverage_mask = util.getScoreMask(boundaries_real, boundaries_fake,
-                                                                     distance_matrix_pairs)
+                    boolean_filter = filterPoints(boundaries_fake, reals_fake_neighbour)
+
+                    precision, recall, density, coverage = util.getScores(distance_matrix_pairs[boolean_filter, :], boundaries_fake,
+                                                                          boundaries_real[boolean_filter], k)
+                    recall_mask, coverage_mask = util.getScoreMask(boundaries_real[boolean_filter], boundaries_fake,
+                                                                     distance_matrix_pairs[boolean_filter, :])
 
                     print(f"Recall is {recall} and Coverage is {coverage}")
                     title_text = f"Samples is {samples} and dimension is {dimension}, "\
                                  f"lambda is {scale_factor} and K_val is {k}"\
                                  f"\n \n Coverage is {coverage:.2f} and Recall is {recall:.2f}"
 
-                    plotBox(boundaries_real, boundaries_fake, reals_fake_neighbour, title_text,
-                            ["Real samples kth real neighbour distance",
-                             "Fake samples kth fake neighbour distance",
-                             "Real samples kth fake neighbour distance"])
-                    plotting.plotData(real_features, fake_features, boundaries_real, boundaries_fake,
-                             recall_mask, coverage_mask, title_text)
+                    print(f"Filtered {boolean_filter.mean()}")
+                    if show_box:
+                        plotBox(boundaries_real[boolean_filter], boundaries_fake, reals_fake_neighbour[boolean_filter], title_text,
+                                ["Real samples kth real neighbour distance",
+                                 "Fake samples kth fake neighbour distance",
+                                 "Real samples kth fake neighbour distance"])
+                    if show_points:
+                        plotting.plotData(real_features[boolean_filter, :], fake_features,
+                                          boundaries_real[boolean_filter], boundaries_fake,
+                                 recall_mask, coverage_mask, title_text)
 
+def filterPoints(distance_set, other_distance_set):
+    max_elem = np.max(distance_set)
+    new_set = np.ones(other_distance_set.shape[0], dtype=bool)
+    for i, other_distance in enumerate(other_distance_set):
+        if other_distance < max_elem*2:
+            new_set[i] = False
+
+    return new_set
 def plotBox(real_boundaries, fake_boundaries, other_boundaries, title_text, xticks_labels):
     plt.figure()
     plt.title(title_text)

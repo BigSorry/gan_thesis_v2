@@ -20,10 +20,6 @@ def plotScores(result_dict):
     plt.ylim([0, 1.1])
     plt.xticks(x_axes, x_names)
 
-def setLimits(min_x, max_x, min_y, max_y):
-    plt.xlim([min_x, max_x])
-    plt.ylim([min_y, max_y])
-
 def plotCircles(data, boundaries):
     alpha_val = 0.2
     for index, sample in enumerate(data):
@@ -153,6 +149,17 @@ def plotDistances(mean_data, std_data):
    plt.errorbar(dimensions, avg_difference_fake, avg_difference_fake_std, label="Mean absolute difference min-max distance fake")
    plt.legend()
 
+def setLimits(real_data, fake_data, boundaries_real, boundaries_fake):
+    min_x = min(np.min(real_data[:, 0]), np.min(fake_data[:, 0]))
+    max_x = max(np.max(real_data[:, 0]), np.max(fake_data[:, 0]))
+    min_y = min(np.min(real_data[:, 1]), np.min(fake_data[:, 1]))
+    max_y = max(np.max(real_data[:, 1]), np.max(fake_data[:, 1]))
+    max_boundary = max(np.max(boundaries_real), np.max(boundaries_fake))
+    offset = max_boundary
+    plt.xlim([min_x - offset, max_x + offset])
+    plt.ylim([min_y - offset, max_y + offset])
+
+
 def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
              recall_mask, coverage_mask, title):
     # Start plotting
@@ -166,19 +173,21 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
                 label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
     plotAcceptRejectData(real_data, recall_mask)
+    setLimits(real_data, fake_data, boundaries_real, boundaries_fake)
     # Position relative to first subplot
     plt.legend(bbox_to_anchor=(0, 1.1), loc="upper left", ncol=1,
                prop={'size': 11})
     # setLimits(min_x, max_x, min_y, max_y)
     # Second subplot
-    ax2 = plt.subplot(1, 2, 2)
+    ax2 = plt.subplot(1, 2, 2, sharex=ax1, sharey=ax1)
     ax2.set_title("Coverage manifold")
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
                 label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
     plotAcceptRejectData(real_data, coverage_mask)
     # Coverage manifold
     plotCircles(real_data, boundaries_real)
-    # setLimits(min_x, max_x, min_y, max_y)
+
+
     # if save:
     #     plt.subplots_adjust(wspace=0.3)
     #     plt.savefig(f"{save_path}{title.replace(' ', '_')}.png",
