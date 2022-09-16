@@ -179,11 +179,12 @@ def checkDistancesData():
 def explainProblem():
     iters = 2
     dimensions = [2]
-    sample_sizes = [10]
-    lambda_factors = [0.01]
+    sample_sizes = [100]
+    lambda_factors = [0.1]
     k_vals = [sample_sizes[0]-1]
     show_box = True
     show_points = True
+    save_path = "./fig_v2/explain_methods/"
     for samples in sample_sizes:
         for dimension in dimensions:
             mean_vec = np.zeros(dimension)
@@ -198,10 +199,8 @@ def explainProblem():
                         real_features, fake_features)
                     boundaries_real = distance_matrix_real[:, k]
                     boundaries_fake = distance_matrix_fake[:, k]
-                    columns_sorted = np.sort(distance_matrix_pairs, axis=0)
-                    rows_sorted = np.sort(distance_matrix_pairs, axis=1)
-                    fakes_real_neighbour = columns_sorted[k, :]
-                    reals_fake_neighbour = rows_sorted[:, k]
+                    fakes_real_neighbour = distance_matrix_pairs.min(axis=0)
+                    reals_fake_neighbour = distance_matrix_pairs.min(axis=1)
                     boolean_filter = filterPoints(boundaries_fake, reals_fake_neighbour)
 
                     precision, recall, density, coverage = util.getScores(distance_matrix_pairs[boolean_filter, :], boundaries_fake,
@@ -219,22 +218,41 @@ def explainProblem():
                         plotBox(boundaries_real[boolean_filter], boundaries_fake, reals_fake_neighbour[boolean_filter], title_text,
                                 ["Real samples kth real neighbour distance",
                                  "Fake samples kth fake neighbour distance",
-                                 "Real samples kth fake neighbour distance"])
+                                 "Real samples kth fake neighbour distance"],
+                                True, save_path)
                     if show_points:
                         plotting.plotData(real_features[boolean_filter, :], fake_features,
                                           boundaries_real[boolean_filter], boundaries_fake,
-                                 recall_mask, coverage_mask, title_text)
+                                 recall_mask, coverage_mask, title_text, True, save_path)
 
 def filterPoints(distance_set, other_distance_set):
     max_elem = np.max(distance_set)
+    filter = max_elem
     new_set = np.ones(other_distance_set.shape[0], dtype=bool)
+    diagnose = False
     for i, other_distance in enumerate(other_distance_set):
-        if other_distance < max_elem*2:
-            new_set[i] = False
+        if diagnose is False:
+            if other_distance < filter:
+                new_set[i] = False
+        else:
+            checking = other_distance - filter
+            if abs(checking) > 0.15:
+                new_set[i] = False
+            else:
+                print(checking)
+
 
     return new_set
-def plotBox(real_boundaries, fake_boundaries, other_boundaries, title_text, xticks_labels):
+def plotBox(real_boundaries, fake_boundaries, other_boundaries,
+            title_text, xticks_labels, save=False, save_path=""):
     plt.figure()
     plt.title(title_text)
     plt.boxplot([real_boundaries, fake_boundaries, other_boundaries])
+    plt.axhline(y=np.max(fake_boundaries), color='r', linestyle='-')
     plt.xticks([1, 2, 3], xticks_labels)
+
+    if save:
+        plt.subplots_adjust(wspace=0.3)
+        plt.savefig(f"{save_path}boxplot.png",
+                    dpi=300, bbox_inches='tight')
+        plt.close()

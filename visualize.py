@@ -22,12 +22,15 @@ def plotScores(result_dict):
 
 def plotCircles(data, boundaries):
     alpha_val = 0.2
+    max_boundary = np.max(boundaries)
     for index, sample in enumerate(data):
         radius = boundaries[index]
-        circle = plt.Circle((sample[0], sample[1]), radius, color='black', fill=False)
-        circle2 = plt.Circle((sample[0], sample[1]), radius, color='Yellow', fill=True, alpha=alpha_val)
-        plt.gca().add_patch(circle)
-        plt.gca().add_patch(circle2)
+        #fill_circle = plt.Circle((sample[0], sample[1]), radius, color='yellow', fill=True, alpha=alpha_val)
+        circle_boundary = plt.Circle((sample[0], sample[1]), radius, color='black', fill=False)
+        circle_max_boundary = plt.Circle((sample[0], sample[1]), max_boundary, color='grey', fill=False)
+        #plt.gca().add_patch(fill_circle)
+        plt.gca().add_patch(circle_boundary)
+        plt.gca().add_patch(circle_max_boundary)
 
 def plotAcceptRejectData(data, boolean_mask):
     alpha_val = 1
@@ -161,7 +164,7 @@ def setLimits(real_data, fake_data, boundaries_real, boundaries_fake):
 
 
 def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
-             recall_mask, coverage_mask, title):
+             recall_mask, coverage_mask, title, save, save_path):
     # Start plotting
     fig = plt.figure(figsize=(12, 4))
     fig.suptitle(title)
@@ -171,7 +174,7 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     # Recall manifold
     plotCircles(fake_data, boundaries_fake)
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
-                label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
+                label="Fake Samples", c="blue", s=2 ** 4, zorder=99, alpha=0.75)
     plotAcceptRejectData(real_data, recall_mask)
     setLimits(real_data, fake_data, boundaries_real, boundaries_fake)
     # Position relative to first subplot
@@ -182,17 +185,17 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     ax2 = plt.subplot(1, 2, 2, sharex=ax1, sharey=ax1)
     ax2.set_title("Coverage manifold")
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
-                label="Fake Samples", c="blue", s=2 ** 7, zorder=99, alpha=0.75)
+                label="Fake Samples", c="blue", s=2 ** 4, zorder=99, alpha=0.75)
     plotAcceptRejectData(real_data, coverage_mask)
     # Coverage manifold
     plotCircles(real_data, boundaries_real)
 
 
-    # if save:
-    #     plt.subplots_adjust(wspace=0.3)
-    #     plt.savefig(f"{save_path}{title.replace(' ', '_')}.png",
-    #                 dpi=300, bbox_inches='tight')
-    #     plt.close()
+    if save:
+        plt.subplots_adjust(wspace=0.3)
+        plt.savefig(f"{save_path}points.png",
+                    dpi=300, bbox_inches='tight')
+        plt.close()
 
 
 def plotBox(data, xticks, title_text, save=False, save_path=""):

@@ -216,7 +216,6 @@ def runAll():
     #plt.show()
     #sample_experiment.sampleExperiment()
     sample_experiment.explainProblem()
-    plt.show()
 
 
 runAll()
