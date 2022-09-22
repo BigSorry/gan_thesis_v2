@@ -166,10 +166,10 @@ def setLimits(real_data, fake_data, boundaries_real, boundaries_fake):
 def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
              recall_mask, coverage_mask, title, save, save_path):
     # Start plotting
-    fig = plt.figure(figsize=(12, 4))
+    fig = plt.figure(figsize=(6, 10))
     fig.suptitle(title)
     # First subplot
-    ax1 = plt.subplot(1, 2, 1)
+    ax1 = plt.subplot(2, 1, 1)
     ax1.set_title("Recall manifold")
     # Recall manifold
     plotCircles(fake_data, boundaries_fake)
@@ -178,11 +178,11 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     plotAcceptRejectData(real_data, recall_mask)
     setLimits(real_data, fake_data, boundaries_real, boundaries_fake)
     # Position relative to first subplot
-    plt.legend(bbox_to_anchor=(0, 1.1), loc="upper left", ncol=1,
+    plt.legend(loc="lower left", ncol=1,
                prop={'size': 11})
     # setLimits(min_x, max_x, min_y, max_y)
     # Second subplot
-    ax2 = plt.subplot(1, 2, 2, sharex=ax1, sharey=ax1)
+    ax2 = plt.subplot(2, 1, 2, sharex=ax1, sharey=ax1)
     ax2.set_title("Coverage manifold")
     plt.scatter(fake_data[:, 0], fake_data[:, 1],
                 label="Fake Samples", c="blue", s=2 ** 4, zorder=99, alpha=0.75)

@@ -179,9 +179,9 @@ def checkDistancesData():
 def explainProblem():
     iters = 2
     dimensions = [2]
-    sample_sizes = [100]
+    sample_sizes = [1000]
     lambda_factors = [0.1]
-    k_vals = [sample_sizes[0]-1]
+    k_vals = [1]
     show_box = True
     show_points = True
     save_path = "./fig_v2/explain_methods/"
@@ -201,7 +201,8 @@ def explainProblem():
                     boundaries_fake = distance_matrix_fake[:, k]
                     fakes_real_neighbour = distance_matrix_pairs.min(axis=0)
                     reals_fake_neighbour = distance_matrix_pairs.min(axis=1)
-                    boolean_filter = filterPoints(boundaries_fake, reals_fake_neighbour)
+                    boolean_filter = filterRecall(distance_matrix_pairs, boundaries_fake)
+                    boolean_filter = ~filterCoverage(distance_matrix_pairs, boundaries_real)
 
                     precision, recall, density, coverage = util.getScores(distance_matrix_pairs[boolean_filter, :], boundaries_fake,
                                                                           boundaries_real[boolean_filter], k)
@@ -209,43 +210,37 @@ def explainProblem():
                                                                      distance_matrix_pairs[boolean_filter, :])
 
                     print(f"Recall is {recall} and Coverage is {coverage}")
-                    title_text = f"Samples is {samples} and dimension is {dimension}, "\
-                                 f"lambda is {scale_factor} and K_val is {k}"\
-                                 f"\n \n Coverage is {coverage:.2f} and Recall is {recall:.2f}"
+                    title_text = f"Samples is {samples}, dimension is {dimension}, "\
+                                 f"lambda is {scale_factor}, and k_val is {k}\n"\
+                                 f"Recall is {recall:.2f} and Coverage is {coverage:.2f} \n\n"
 
                     print(f"Filtered {boolean_filter.mean()}")
                     if show_box:
                         plotBox(boundaries_real[boolean_filter], boundaries_fake, reals_fake_neighbour[boolean_filter], title_text,
-                                ["Real samples kth real neighbour distance",
-                                 "Fake samples kth fake neighbour distance",
-                                 "Real samples kth fake neighbour distance"],
+                                ["Real samples kth \n real neighbour distance",
+                                 "Fake samples kth \n fake neighbour distance",
+                                 "Real samples smallest \n distance to fake samples"],
                                 True, save_path)
                     if show_points:
                         plotting.plotData(real_features[boolean_filter, :], fake_features,
                                           boundaries_real[boolean_filter], boundaries_fake,
                                  recall_mask, coverage_mask, title_text, True, save_path)
 
-def filterPoints(distance_set, other_distance_set):
-    max_elem = np.max(distance_set)
-    filter = max_elem
-    new_set = np.ones(other_distance_set.shape[0], dtype=bool)
-    diagnose = False
-    for i, other_distance in enumerate(other_distance_set):
-        if diagnose is False:
-            if other_distance < filter:
-                new_set[i] = False
-        else:
-            checking = other_distance - filter
-            if abs(checking) > 0.15:
-                new_set[i] = False
-            else:
-                print(checking)
+def filterRecall(distance_matrix, boundaries):
+    boolean_matrix = distance_matrix > boundaries
+    boolean_filter = boolean_matrix.all(axis=1)
 
+    return boolean_filter
 
-    return new_set
+def filterCoverage(distance_matrix, boundaries):
+    boolean_matrix = distance_matrix < np.expand_dims(boundaries, axis=1)
+    boolean_filter = boolean_matrix.any(axis=1)
+
+    return boolean_filter
+
 def plotBox(real_boundaries, fake_boundaries, other_boundaries,
             title_text, xticks_labels, save=False, save_path=""):
-    plt.figure()
+    plt.figure(figsize=(8, 5))
     plt.title(title_text)
     plt.boxplot([real_boundaries, fake_boundaries, other_boundaries])
     plt.axhline(y=np.max(fake_boundaries), color='r', linestyle='-')
