@@ -22,15 +22,12 @@ def plotScores(result_dict):
 
 def plotCircles(data, boundaries):
     alpha_val = 0.2
-    max_boundary = np.max(boundaries)
     for index, sample in enumerate(data):
         radius = boundaries[index]
         #fill_circle = plt.Circle((sample[0], sample[1]), radius, color='yellow', fill=True, alpha=alpha_val)
         circle_boundary = plt.Circle((sample[0], sample[1]), radius, color='black', fill=False)
-        circle_max_boundary = plt.Circle((sample[0], sample[1]), max_boundary, color='grey', fill=False)
         #plt.gca().add_patch(fill_circle)
         plt.gca().add_patch(circle_boundary)
-        plt.gca().add_patch(circle_max_boundary)
 
 def plotAcceptRejectData(data, boolean_mask):
     alpha_val = 1

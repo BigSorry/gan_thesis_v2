@@ -84,9 +84,11 @@ def sampleExperiment():
     iters = 2
     dimensions = [2, 4, 8, 16, 32, 64]
     sample_sizes = [1000, 2000, 4000, 8000]
+    sample_sizes = [1000]
     lambda_factors = [0.01, 0.1, 10, 100]
-    save_data = True
+    save_data = False
     path_data = "C:/Users/Lex/OneDrive/dataframe/dataframe.pickle"
+    path_data = "C:/Users/lexme/OneDrive/dataframe/large.pickle"
     if save_data:
         dataframe = getData(iters, dimensions, sample_sizes, lambda_factors)
         util.savePickle(path_data, dataframe)
@@ -98,8 +100,8 @@ def sampleExperiment():
     # PC paths
     path_map = "C:/Users/Lex/OneDrive/plots_thesis/pc/heatmap/"
     path_box = "C:/Users/Lex/OneDrive/plots_thesis/pc/boxplot/"
-    # path_map = "C:/Users/lexme/OneDrive/plots_thesis/laptop/heatmap/"
-    # path_box = "C:/Users/lexme/OneDrive/plots_thesis/laptop/boxplot/"
+    path_map = "C:/Users/lexme/OneDrive/plots_thesis/laptop/heatmap/"
+    path_box = "C:/Users/lexme/OneDrive/plots_thesis/laptop/boxplot/"
     for sample_size in sample_sizes:
         for dimension in dimensions:
                 select_data = dataframe.loc[(dataframe["sample_size"] == sample_size) &

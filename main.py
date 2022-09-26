@@ -95,8 +95,6 @@ def doModeCollapse():
                     row = [k_val, variance, dim, precision, recall, density, coverage]
                     row_data.append(row)
 
-
-
     datafame = pd.DataFrame(columns=columns, data=row_data)
     plotting.plotDataFrame(datafame, "coverage")
     plotting.plotDataFrame(datafame, "recall")
@@ -214,8 +212,8 @@ def runAll():
     #doModeCollapse()
     #distanceCheck()
     #plt.show()
-    #sample_experiment.sampleExperiment()
-    sample_experiment.explainProblem()
+    sample_experiment.sampleExperiment()
+    #sample_experiment.explainProblem()
 
 
 runAll()
