@@ -93,29 +93,31 @@ def plotInfo(info_dict):
     plt.show()
 
 def boxplot(recall, coverage, x_ticks, title_text):
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True, figsize=(16, 8))
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharey=True, figsize=(16, 8))
     ax1, ax2 = axes.flatten()
     fig.suptitle(title_text)
 
     ax1.set_title("Recall")
     ax1.boxplot(recall)
-    ax1.set_xticks(np.arange(len(recall))+1, x_ticks)
     ax1.set_ylim([0, 1.1])
+    ax1.set_xticks([])
 
     ax2.set_title("Coverage")
     ax2.boxplot(coverage)
-    ax2.set_xticks(np.arange(len(coverage)) + 1, x_ticks)
     ax2.set_xlabel("K Value")
 
+    plt.xticks(np.arange(len(coverage)) + 1, x_ticks, rotation=90)
 
 def experimentManifold():
     # Data Setup
     iters = 2
     dimensions = [2]
     sample_sizes = [1000]
-    k_samples = 10
+    k_samples = 1000 // 5
     k_vals = {samples:np.linspace(1, samples-1, k_samples, dtype=int) for samples in sample_sizes}
-    lambda_factors = [0.01, 0.1, 1, 10, 100, 1000]
+    print(k_vals)
+    lambda_factors = [0.001, 0.1, 1, 10, 100, 1000]
+    lambda_factors = [0.001,  1000]
     info_dict = doEval(sample_sizes, dimensions, k_vals, lambda_factors, splits=100)
     plotInfo(info_dict)
 
