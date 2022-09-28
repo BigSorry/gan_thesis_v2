@@ -86,38 +86,31 @@ def plotInfo(info_dict):
             recall_splits.append(recalls)
             coverage_splits.append(coverage)
 
-        boxplot(recall_splits, coverage_splits, list(k_dict.keys()),
-                f"Samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
+        boxplot(recall_splits, list(k_dict.keys()),
+                f"Recall, samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
+        boxplot(coverage_splits, list(k_dict.keys()),
+                f"Coverage, samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
 
 
     plt.show()
 
-def boxplot(recall, coverage, x_ticks, title_text):
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharey=True, figsize=(16, 8))
-    ax1, ax2 = axes.flatten()
-    fig.suptitle(title_text)
-
-    ax1.set_title("Recall")
-    ax1.boxplot(recall)
-    ax1.set_ylim([0, 1.1])
-    ax1.set_xticks([])
-
-    ax2.set_title("Coverage")
-    ax2.boxplot(coverage)
-    ax2.set_xlabel("K Value")
-
-    plt.xticks(np.arange(len(coverage)) + 1, x_ticks, rotation=90)
+def boxplot(scores, x_ticks, title_text):
+    plt.figure()
+    plt.title(title_text)
+    plt.boxplot(scores)
+    plt.ylim([0, 1.1])
+    plt.xlabel("K Value")
+    plt.xticks(np.arange(len(scores)) + 1, x_ticks, rotation=90)
 
 def experimentManifold():
     # Data Setup
     iters = 2
     dimensions = [2]
     sample_sizes = [1000]
-    k_samples = 1000 // 5
-    k_vals = {samples:np.linspace(1, samples-1, k_samples, dtype=int) for samples in sample_sizes}
-    print(k_vals)
-    lambda_factors = [0.001, 0.1, 1, 10, 100, 1000]
-    lambda_factors = [0.001,  1000]
+    k_samples = 10
+    k_vals = {samples:[2**i for i in range(k_samples)] for samples in sample_sizes}
+    k_vals[1000].append(999)
+    lambda_factors = [0.001, 1, 1000]
     info_dict = doEval(sample_sizes, dimensions, k_vals, lambda_factors, splits=100)
     plotInfo(info_dict)
 
