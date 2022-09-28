@@ -68,8 +68,10 @@ def doEval(sample_sizes, dimensions, k_params, lambda_factors, splits=5):
                         boundaries_real_used[test_index] = 0
                         boundaries_fake_used = boundaries_fake
                         boundaries_fake_used[test_index] = 0
+                        special_coverage = util.getCoverageSpecial(distance_matrix_pairs, boundaries_real, test_index)
                         metric_scores = util.getScores(distance_matrix_pairs, boundaries_real_used,
                                                                                boundaries_fake_used, k)
+                        metric_scores[3] = special_coverage
                         scores.append(metric_scores)
 
                     info_dict[key][k] = np.array(scores)

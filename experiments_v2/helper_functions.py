@@ -86,8 +86,14 @@ def getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val):
         axis=0).mean()
     coverage = (distance_matrix_pairs.min(axis=1) < boundaries_real).mean()
 
-    return precision, recall, density, coverage
+    return [precision, recall, density, coverage]
 
+def getCoverageSpecial(distance_matrix_pairs,  boundaries_real, special_indices):
+    changed_matrix_pairs = distance_matrix_pairs.copy()
+    changed_matrix_pairs[:, special_indices] = np.inf
+    coverage = (changed_matrix_pairs.min(axis=1) < boundaries_real).mean()
+
+    return coverage
 def getLimits(saved_real_sets, saved_fake_sets, radius=10):
     real_np = np.concatenate(np.array(saved_real_sets), axis=0)
     fake_np = np.concatenate(np.array(saved_fake_sets), axis=0)
