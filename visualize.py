@@ -29,12 +29,12 @@ def plotCircles(data, boundaries):
         #plt.gca().add_patch(fill_circle)
         plt.gca().add_patch(circle_boundary)
 
-def plotAcceptRejectData(data, boolean_mask):
+def plotAcceptRejectData(data, boolean_mask, data_kind="real"):
     alpha_val = 1
     accepted_data = data[boolean_mask, :]
     rejected_data = data[~boolean_mask, :]
-    plt.scatter(accepted_data[:, 0], accepted_data[:, 1], c="green", label="Accepted data", zorder=98, s=2**4, alpha=alpha_val)
-    plt.scatter(rejected_data[:, 0], rejected_data[:, 1], c="red", label="Rejected data", zorder=97, s=2**4, alpha=alpha_val)
+    plt.scatter(accepted_data[:, 0], accepted_data[:, 1], c="green", label=f"Accepted {data_kind} data", zorder=98, s=2**4, alpha=alpha_val)
+    plt.scatter(rejected_data[:, 0], rejected_data[:, 1], c="red", label=f"Rejected {data_kind} data", zorder=97, s=2**4, alpha=alpha_val)
 
 
 def _plotErrorbar(subplot, title_text, x, scores):
