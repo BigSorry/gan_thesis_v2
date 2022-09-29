@@ -20,7 +20,6 @@ def doEval(sample_sizes, dimensions, k_params, lambda_factors, iters, splits=5):
                     real_features = np.random.multivariate_normal(mean_real, cov_real, size=samples)
                     fake_features = np.random.multivariate_normal(mean_vec, cov_fake, size=samples)
                     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
-                    key = (iter, samples, dimension, scale_factor)
                     for k in k_params[samples]:
                         boundaries_real = distance_matrix_real[:, k]
                         boundaries_fake = distance_matrix_fake[:, k]
@@ -50,12 +49,10 @@ def plotInfo(dataframe):
 
         boxplot(recall_data, k_vals,
                 f"Recall, samples {experiment_key[0]} with dimension {experiment_key[1]}, lambda factor {experiment_key[2]}, and 10 splits",
-                save=True, save_path=f"../fig_v2/recall/kfold/lambda{experiment_key[2]}.png")
+                save=True, save_path=f"../fig_v2/recall/kfold/{experiment_key}.png")
         # boxplot(coverage_splits, list(k_dict.keys()),
         #          f"Coverage, samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
 
-
-    plt.show()
 
 def boxplot(scores, x_ticks, title_text, save, save_path):
     plt.figure()
@@ -70,14 +67,25 @@ def boxplot(scores, x_ticks, title_text, save, save_path):
                     dpi=300, bbox_inches='tight')
         plt.close()
 
+def getParams(sample_size):
+    k_values = []
+    for i in range(sample_size):
+        k_val = 2 **i
+        if k_val > sample_size:
+            break
+        else:
+            k_values.append(k_val)
+    k_values.append(sample_size - 1)
+
+    return k_values
+
 def experimentManifold():
     # Data Setup
     iters = 10
     dimensions = [2]
-    sample_sizes = [2000]
-    k_samples = 10
-    k_vals = {samples:[2**i for i in range(k_samples)] for samples in sample_sizes}
-    k_vals[2000].append(1999)
+    sample_sizes = [2000, 4000]
+    k_vals = {samples:getParams(samples) for samples in sample_sizes}
+    print(k_vals)
     lambda_factors = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
     dataframe = doEval(sample_sizes, dimensions, k_vals, lambda_factors, iters, splits=10)
     plotInfo(dataframe)
