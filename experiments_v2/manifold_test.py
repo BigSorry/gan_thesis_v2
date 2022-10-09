@@ -24,12 +24,18 @@ def doEval(sample_sizes, dimensions, k_params, lambda_factors, iters, splits=5):
                         boundaries_real = distance_matrix_real[:, k]
                         boundaries_fake = distance_matrix_fake[:, k]
                         kf = KFold(n_splits=splits, random_state=None, shuffle=True)
-                        for train_index, test_index in kf.split(boundaries_real):
+                        #for train_index, test_index in kf.split(boundaries_real):
+                        indices = [i for i in range(samples)]
+                        off_samples = 995
+                        for i in range(50):
+                            off_indices = np.random.choice(samples, off_samples, replace=False)
                             boundaries_real_used = boundaries_real.copy()
-                            boundaries_real_used[test_index] = 0
+                            boundaries_real_used[off_indices] = 0
                             boundaries_fake_used = boundaries_fake.copy()
-                            boundaries_fake_used[test_index] = 0
-                            special_coverage = util.getCoverageSpecial(distance_matrix_pairs, boundaries_real, test_index)
+                            boundaries_fake_used[off_indices] = 0
+                            # Turn off fake samples for Coverage
+                            special_coverage = util.getCoverageSpecial(distance_matrix_pairs, boundaries_real, off_indices)
+                            # Turn off only fake circles for Recall
                             metric_scores = util.getScores(distance_matrix_pairs, boundaries_fake_used,
                                                                                    boundaries_real, k)
                             row = [iter, samples, dimension, scale_factor, k, metric_scores[1], special_coverage]
@@ -63,7 +69,7 @@ def boxplot(scores, x_ticks, title_text, save, save_path):
     plt.xticks(np.arange(len(scores)) + 1, x_ticks, rotation=90)
     if save:
         plt.subplots_adjust(wspace=0.3)
-        plt.savefig(f"{save_path}.png",
+        plt.savefig(f"{save_path}",
                     dpi=300, bbox_inches='tight')
         plt.close()
 
@@ -82,11 +88,12 @@ def getParams(sample_size):
 def experimentManifold():
     # Data Setup
     iters = 10
-    dimensions = [2]
-    sample_sizes = [2000, 4000]
+    dimensions = [2, 32, 64]
+    sample_sizes = [1000]
     k_vals = {samples:getParams(samples) for samples in sample_sizes}
     print(k_vals)
     lambda_factors = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    lambda_factors = [1000]
     dataframe = doEval(sample_sizes, dimensions, k_vals, lambda_factors, iters, splits=10)
     plotInfo(dataframe)
 
