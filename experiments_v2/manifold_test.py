@@ -5,11 +5,11 @@ import visualize as plotting
 import experiments_v2.helper_functions as util
 from sklearn.model_selection import KFold
 
-def doEval(sample_sizes, dimensions, k_params, lambda_factors, iters, splits=5):
+def doEval(sample_sizes, dimensions, k_params, lambda_factors, data_iters, circle_iters, percentage_off):
     columns = ["iter", "sample_size", "dimension", "lambda",
                "k_val", "recall", "coverage"]
     row_data = []
-    for iter in range(iters):
+    for iter in range(data_iters):
         for samples in sample_sizes:
             for dimension in dimensions:
                 mean_vec = np.zeros(dimension)
@@ -23,11 +23,8 @@ def doEval(sample_sizes, dimensions, k_params, lambda_factors, iters, splits=5):
                     for k in k_params[samples]:
                         boundaries_real = distance_matrix_real[:, k]
                         boundaries_fake = distance_matrix_fake[:, k]
-                        kf = KFold(n_splits=splits, random_state=None, shuffle=True)
-                        #for train_index, test_index in kf.split(boundaries_real):
-                        indices = [i for i in range(samples)]
-                        off_samples = 995
-                        for i in range(50):
+                        off_samples = int(samples * percentage_off)
+                        for i in range(circle_iters):
                             off_indices = np.random.choice(samples, off_samples, replace=False)
                             boundaries_real_used = boundaries_real.copy()
                             boundaries_real_used[off_indices] = 0
@@ -44,7 +41,7 @@ def doEval(sample_sizes, dimensions, k_params, lambda_factors, iters, splits=5):
     dataframe = pd.DataFrame(columns=columns, data=row_data)
     return dataframe
 
-def plotInfo(dataframe):
+def plotInfo(dataframe, percentage_off):
     experiment_group = dataframe.groupby(["sample_size", "dimension", "lambda"])
     for experiment_key, experiment_group in experiment_group:
         recall_data = []
@@ -54,7 +51,8 @@ def plotInfo(dataframe):
             recall_data.append(recalls)
 
         boxplot(recall_data, k_vals,
-                f"Recall, samples {experiment_key[0]} with dimension {experiment_key[1]}, lambda factor {experiment_key[2]}, and 10 splits",
+                f"Recall, samples {experiment_key[0]} with dimension {experiment_key[1]}, lambda factor {experiment_key[2]}, "
+                f"and {percentage_off*100}% circles turned off",
                 save=True, save_path=f"../fig_v2/recall/kfold/{experiment_key}.png")
         # boxplot(coverage_splits, list(k_dict.keys()),
         #          f"Coverage, samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
@@ -86,15 +84,19 @@ def getParams(sample_size):
     return k_values
 
 def experimentManifold():
-    # Data Setup
-    iters = 10
-    dimensions = [2, 32, 64]
+    # Parameters setup
+    data_iters = 10
+    circle_iters = 1
+    percentage_off = 0
+    dimensions = [2, 4, 8, 16, 32, 64]
     sample_sizes = [1000]
     k_vals = {samples:getParams(samples) for samples in sample_sizes}
     print(k_vals)
     lambda_factors = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
-    lambda_factors = [1000]
-    dataframe = doEval(sample_sizes, dimensions, k_vals, lambda_factors, iters, splits=10)
-    plotInfo(dataframe)
+    lambda_factors = [1, 1000]
+    # Evaluation procedure
+    dataframe = doEval(sample_sizes, dimensions, k_vals, lambda_factors, data_iters, circle_iters, percentage_off)
+    # Plotting
+    plotInfo(dataframe, percentage_off)
 
 experimentManifold()
