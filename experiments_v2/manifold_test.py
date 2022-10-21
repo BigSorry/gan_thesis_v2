@@ -5,57 +5,76 @@ import visualize as plotting
 import experiments_v2.helper_functions as util
 from sklearn.model_selection import KFold
 
-def doEval(sample_sizes, dimensions, k_params, lambda_factors, data_iters, circle_iters, percentage_off):
-    columns = ["iter", "sample_size", "dimension", "lambda",
-               "k_val", "recall", "coverage"]
-    row_data = []
+def getDistributions(sample_sizes, dimensions, lambda_factors, data_iters):
+    real_sets = []
+    fake_sets = []
+    params_used = []
     for iter in range(data_iters):
         for samples in sample_sizes:
             for dimension in dimensions:
                 mean_vec = np.zeros(dimension)
+                random_mean_add = np.random.normal(size=dimension)
                 for scale_factor in lambda_factors:
-                    mean_real = mean_vec
+                    mean_real = mean_vec + random_mean_add
                     cov_real = np.eye(dimension)
                     cov_fake = np.eye(dimension) * scale_factor
+
                     real_features = np.random.multivariate_normal(mean_real, cov_real, size=samples)
                     fake_features = np.random.multivariate_normal(mean_vec, cov_fake, size=samples)
-                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
-                    for k in k_params[samples]:
-                        boundaries_real = distance_matrix_real[:, k]
-                        boundaries_fake = distance_matrix_fake[:, k]
-                        off_samples = int(samples * percentage_off)
-                        for i in range(circle_iters):
-                            off_indices = np.random.choice(samples, off_samples, replace=False)
-                            boundaries_real_used = boundaries_real.copy()
-                            boundaries_real_used[off_indices] = 0
-                            boundaries_fake_used = boundaries_fake.copy()
-                            boundaries_fake_used[off_indices] = 0
-                            # Turn off fake samples for Coverage
-                            special_coverage = util.getCoverageSpecial(distance_matrix_pairs, boundaries_real, off_indices)
-                            # Turn off only fake circles for Recall
-                            metric_scores = util.getScores(distance_matrix_pairs, boundaries_fake_used,
-                                                                                   boundaries_real, k)
-                            row = [iter, samples, dimension, scale_factor, k, metric_scores[1], special_coverage]
-                            row_data.append(row)
+                    real_sets.append(real_features)
+                    fake_sets.append(fake_features)
+                    params_used.append([iter, samples, dimension, scale_factor])
+
+    return real_sets, fake_sets, params_used
+def doEval(real_features, fake_features, k_params, circle_iters, percentage_off):
+    columns = ["iter", "k_val", "recall"]
+    row_data = []
+    samples = real_features.shape[0]
+    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_features, fake_features)
+    for k in k_params[samples]:
+        boundaries_real = distance_matrix_real[:, k]
+        boundaries_fake = distance_matrix_fake[:, k]
+        off_samples = int(samples * percentage_off)
+        for i in range(circle_iters):
+            off_indices = np.random.choice(samples, off_samples, replace=False)
+            boundaries_real_used = boundaries_real.copy()
+            boundaries_real_used[off_indices] = 0
+            boundaries_fake_used = boundaries_fake.copy()
+            boundaries_fake_used[off_indices] = 0
+            # Turn off fake samples for Coverage
+
+            special_coverage = util.getCoverageSpecial(distance_matrix_pairs, boundaries_real, off_indices)
+            # Turn off circles works only for Precision/Recall
+            precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake_used,
+                                                                   boundaries_real_used, k)
+            row = [i, k, recall]
+            row_data.append(row)
 
     dataframe = pd.DataFrame(columns=columns, data=row_data)
     return dataframe
 
-def plotInfo(dataframe, percentage_off):
-    experiment_group = dataframe.groupby(["sample_size", "dimension", "lambda"])
-    for experiment_key, experiment_group in experiment_group:
-        recall_data = []
-        k_vals = experiment_group["k_val"].unique()
-        for k in k_vals:
-            recalls = experiment_group.loc[experiment_group["k_val"] == k, "recall"].values
-            recall_data.append(recalls)
+def plotInfo(score_dataframe, data_params, percentage_off):
+    samples = data_params[1]
+    dimension = data_params[2]
+    lambda_factor = data_params[3]
+    experiment_key = f"{samples}_{dimension}_{lambda_factor}"
+    grouped_data = score_dataframe.groupby("k_val")
 
-        boxplot(recall_data, k_vals,
-                f"Recall, samples {experiment_key[0]} with dimension {experiment_key[1]}, lambda factor {experiment_key[2]}, "
-                f"and {percentage_off*100}% circles turned off",
-                save=True, save_path=f"../fig_v2/recall/kfold/{experiment_key}.png")
-        # boxplot(coverage_splits, list(k_dict.keys()),
-        #          f"Coverage, samples {experiment_key[0]} with dimension {experiment_key[1]} and lambda factor {experiment_key[2]}")
+    recalls = []
+    k_vals = []
+    for k_val, group_data in grouped_data:
+        recall = group_data["recall"].values
+        recalls.append(recall)
+        k_vals.append(k_val)
+
+    boxplot(recalls, k_vals,
+            f"Recall, samples {samples} with dimension {dimension}, lambda factor {lambda_factor}, "
+            f"and {percentage_off*100}% circles turned off",
+            save=True, save_path=f"../fig_v2/recall/split/{experiment_key}.png")
+    # boxplot(coverages, k_vals,
+    #           f"Precision, samples {samples]} with dimension {dimension}, lambda factor {lambda_factor}, "
+    #         f"and {percentage_off*100}% circles turned off",
+    #         save=True, save_path=f"../fig_v2/precision/split/{experiment_key}.png")
 
 
 def boxplot(scores, x_ticks, title_text, save, save_path):
@@ -86,17 +105,22 @@ def getParams(sample_size):
 def experimentManifold():
     # Parameters setup
     data_iters = 10
-    circle_iters = 1
-    percentage_off = 0
-    dimensions = [2, 4, 8, 16, 32, 64]
+    circle_iters = 10
+    percentage_off = 0.95
+    dimensions = [32]
     sample_sizes = [1000]
-    k_vals = {samples:getParams(samples) for samples in sample_sizes}
-    print(k_vals)
     lambda_factors = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
     lambda_factors = [1, 1000]
+    k_vals = {samples:getParams(samples) for samples in sample_sizes}
+    print(k_vals)
+    # Get data
+    real_sets, fake_sets, params_used = getDistributions(sample_sizes, dimensions, lambda_factors, data_iters)
     # Evaluation procedure
-    dataframe = doEval(sample_sizes, dimensions, k_vals, lambda_factors, data_iters, circle_iters, percentage_off)
-    # Plotting
-    plotInfo(dataframe, percentage_off)
+    for i in range(len(real_sets)):
+        real_features = real_sets[i]
+        fake_features = fake_sets[i]
+        data_params = params_used[i]
+        score_dataframe = doEval(real_features, fake_features, k_vals, circle_iters, percentage_off)
+        plotInfo(score_dataframe, data_params, percentage_off)
 
 experimentManifold()
