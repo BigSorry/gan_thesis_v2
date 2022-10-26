@@ -159,7 +159,6 @@ def setLimits(real_data, fake_data, boundaries_real, boundaries_fake):
     plt.xlim([min_x - offset, max_x + offset])
     plt.ylim([min_y - offset, max_y + offset])
 
-
 def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
              recall_mask, coverage_mask, title, save, save_path):
     # Start plotting
@@ -187,13 +186,11 @@ def plotData(real_data, fake_data, boundaries_real, boundaries_fake,
     # Coverage manifold
     plotCircles(real_data, boundaries_real)
 
-
     if save:
         plt.subplots_adjust(wspace=0.3)
         plt.savefig(f"{save_path}points.png",
                     dpi=300, bbox_inches='tight')
         plt.close()
-
 
 def plotBox(data, xticks, title_text, save=False, save_path=""):
     plt.figure(figsize=(16, 6))
@@ -207,4 +204,12 @@ def plotBox(data, xticks, title_text, save=False, save_path=""):
         plt.subplots_adjust(wspace=0.3)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
+def dataframeBoxplot(score_dataframe, score_name, title_text):
+    plt.figure()
+    plt.ylim([0, 1.1])
+    plt.title(title_text)
+    sns.boxplot(x="k_val", y=score_name, data=score_dataframe).set(
+        xlabel='K value',
+        ylabel='Recall'
+    )
 
