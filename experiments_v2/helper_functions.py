@@ -6,6 +6,18 @@ import visualize as plotting
 from sklearn.metrics import pairwise_distances
 import experiments_v2.fake_diverse as experiment_diverse
 
+def getParams(sample_size):
+    k_values = []
+    for i in range(sample_size):
+        k_val = 2 **i
+        if k_val > sample_size:
+            break
+        else:
+            k_values.append(k_val)
+    k_values.append(sample_size - 1)
+
+    return k_values
+
 def savePickle(path, python_object):
     with open(path, 'wb') as fp:
         pickle.dump(python_object, fp)
