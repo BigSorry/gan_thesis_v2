@@ -205,11 +205,29 @@ def plotBox(data, xticks, title_text, save=False, save_path=""):
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
 def dataframeBoxplot(score_dataframe, score_name, title_text):
-    plt.figure()
     plt.ylim([0, 1.1])
     plt.title(title_text)
     sns.boxplot(x="k_val", y=score_name, data=score_dataframe).set(
-        xlabel='K value',
-        ylabel='Recall'
+        xlabel='k-value',
+        ylabel=score_name
     )
 
+def textBar(bars):
+    for bar in bars:
+        plt.annotate(f'{bar.get_height()}',
+                     (bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01),
+                     verticalalignment='bottom', horizontalalignment='center',
+                     fontsize=9)
+def plotBars(score_dataframe, score_dataframe_extra, score_name):
+   score_original = score_dataframe[score_name].values
+   score_extra = score_dataframe_extra[score_name].values
+   k_vals = score_dataframe["k_val"].values
+   x_vals = ((np.arange(score_original.shape[0]) + 1)*3)
+   width = 1
+   plt.ylim([0, 1.4])
+   plt.xticks(x_vals, k_vals)
+   bars = plt.bar(x_vals, score_original, -width, align="edge", label="Original fake data", color="black")
+   bars2 = plt.bar(x_vals, score_extra, width, align="edge", label="Fake data with outliers", color="grey")
+   textBar(bars)
+   textBar(bars2)
+   plt.legend()
