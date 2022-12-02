@@ -14,12 +14,21 @@ def scorePlots(score_dataframe, score_dataframe_extra):
     plotting.plotBars(score_dataframe, score_dataframe_extra, "precision")
     plt.xlabel("k-val")
 
-def plotData(real, fake, extra_points=np.array([])):
+def plotData(real, fake, extra_points, outlier_boundaries):
     plt.figure()
+    lim_range = 6
+    plt.xlim([-lim_range, lim_range])
+    plt.ylim([-lim_range, lim_range])
     plt.scatter(real[:, 0], real[:, 1], label="Real data", color="green")
     plt.scatter(fake[:, 0], fake[:, 1], label="Fake data", color="blue")
-    if extra_points.shape[0] > 0:
-        plt.scatter(extra_points[:, 0], extra_points[:, 1], label="Added fake outliers", color="red")
+    plt.scatter(extra_points[:, 0], extra_points[:, 1], label="Added fake outliers", color="red")
+    for index, sample in enumerate(extra_points):
+        radius = outlier_boundaries[index]
+        #fill_circle = plt.Circle((sample[0], sample[1]), radius, color='yellow', fill=True, alpha=alpha_val)
+        circle_boundary = plt.Circle((sample[0], sample[1]), radius, color='black', fill=False)
+        #plt.gca().add_patch(fill_circle)
+        plt.gca().add_patch(circle_boundary)
+
     plt.legend()
 
 def doEval(real_features, fake_features, k_vals):
@@ -51,9 +60,10 @@ def doTest():
     score_dataframe = doEval(real_features, fake_features, k_vals)
     corner_value=2
     random_distribution = np.array([[-corner_value,-corner_value], [-corner_value, corner_value], [corner_value,-corner_value], [corner_value,corner_value]])
+    outlier_boundaries, _, _ = util.getBoundaries(random_distribution, fake_features, k=1)
     fake_extra = np.concatenate((fake_features,random_distribution), axis=0)
     score_dataframe_extra = doEval(real_features, fake_extra, k_vals)
-    plotData(real_features, fake_features, random_distribution)
+    plotData(real_features, fake_features, random_distribution, outlier_boundaries)
     scorePlots(score_dataframe, score_dataframe_extra)
 
 
