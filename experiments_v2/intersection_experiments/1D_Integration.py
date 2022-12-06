@@ -16,6 +16,7 @@ def doGrouping(value):
         return "0.6-0.8"
     else:
         return "<0.8"
+
 def plotScores(dataframe, score_names):
     selected_data = dataframe.copy()
     selected_data["intersection_ratio"] = selected_data["intersection_ratio"].round(2)
@@ -28,11 +29,11 @@ def plotScores(dataframe, score_names):
         plt.ylabel("Score")
 
 
-def createDistributions(params, sample_size, dimension, iters):
+def createDistributions(params, sample_size, iters):
     functions = {}
     for param in params:
         for i in range(iters):
-            samples = np.random.uniform(-param, param, size=(sample_size, dimension))
+            samples = np.random.normal(param, 1, size=sample_size)
             functions[-param, param, i] = samples
 
     return functions
@@ -43,7 +44,7 @@ def getAreaCalc(base_param, other_param):
     density_difference = np.abs((1 / base_area) - (1 / other_area))
     intersect_ratio = other_area / base_area
 
-    return density_difference, intersect_ratio
+    return
 
 def getDataframe(distribution_dict, k_vals):
     columns = ["key", "k_val", "intersection_ratio", "density_diff",
@@ -67,31 +68,21 @@ def getDataframe(distribution_dict, k_vals):
     dataframe = pd.DataFrame(columns=columns, data=row_data)
     return dataframe
 
-def doCorr(dataframe, score_names):
-    medians = {}
-    stds = {}
-    selected_data = dataframe.loc[dataframe["intersection_ratio"] <= 1, :]
-    selected_data2 = dataframe.loc[dataframe["intersection_ratio"] > 1, :]
-    corr = selected_data.corr()
-    corr2 = selected_data2.corr()
-    for score_name in score_names:
-        medians[score_name] = dataframe[score_name].median()
-        stds[score_name] = dataframe[score_name].std()
-
 def doExperiment(params):
     sample_size=100
-    dimension=2
-    iters = 2
+    dimension=1
+    iters = 1
     k_vals = util.getParams(sample_size)
+    k_vals = [1, 2, 4, 8]
     print(params)
     print(k_vals)
-    distribution_dict = createDistributions(params, sample_size, dimension, iters)
+    distribution_dict = createDistributions(params, sample_size, iters)
     dataframe = getDataframe(distribution_dict, k_vals)
     score_names = ["precision", "recall", "density", "coverage"]
     plotScores(dataframe, score_names)
-    doCorr(dataframe, score_names)
 
-params = np.arange(0.1, 1.1, step=0.2)
+
+params = np.arange(1, 10, step=1)
 doExperiment(params)
 
 
