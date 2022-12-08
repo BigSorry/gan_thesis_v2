@@ -34,31 +34,36 @@ def createDistributions(params, sample_size, iters):
     functions = {}
     for param in params:
         for i in range(iters):
-            samples = np.random.exponential(param, size=(sample_size,2))
+            samples = np.random.exponential(param, size=(sample_size,1))
             functions[-param, param, i] = samples
 
     return functions
 
 def getMax(param, dimension):
     quantile = -np.log(1-0.99)/param
-    return quantile**dimension
+    return quantile
 
 def getAreaCalc(base_param, other_param, x=10):
     threshold_base = getMax(base_param, dimension=2)
     threshold_other = getMax(other_param, dimension=2)
 
-    print(threshold_base, threshold_other)
-    base_area = 1 - np.exp(-(base_param)*threshold_base)
-    other_area = 1 - np.exp(-(other_param)*threshold_other)
-    print(base_area, other_area)
+    take_max = max(threshold_base, threshold_other)
+    base_area = 1 - np.exp(-(base_param)*take_max)
+    other_area = 1 - np.exp(-(other_param)*take_max)
 
-    return threshold_other / threshold_base
+    return other_area / base_area
 
-def getWassersteinDistance(data, other_data):
-    x = wasserstein_distance(data[:, 0], other_data[:, 0])
-    y = wasserstein_distance(data[:, 1], other_data[:, 1])
+def getWassersteinDistance(data, other_data, dimensions=1):
+    average_distance = 0
+    for dimension in range(dimensions):
+        average_distance += (wasserstein_distance(data[:, dimension], other_data[:, dimension]) / dimensions)
 
-    return x+y
+    return average_distance
+
+def testDistance(base_param, other_param):
+    first_part = (-np.exp(-other_param) - 1) / other_param
+    second_part = (-np.exp(-base_param) - 1) / base_param
+    return first_part + second_part
 def getDataframe(distribution_dict, k_vals):
     columns = ["key", "k_val", "intersection_ratio",
                "precision", "recall", "density", "coverage"]
@@ -69,13 +74,19 @@ def getDataframe(distribution_dict, k_vals):
             other_high_param = other_key[1]
             max_element = max(np.max(base_data), np.max(other_data))
             intersect_ratio = getAreaCalc(high_param, other_high_param, x=max_element)
+            intersect_ratio2 = getWassersteinDistance(base_data, other_data, dimensions=1)
+            a = np.sort(base_data, axis=0)
+            b = np.sort(other_data, axis=0)
+            intersect_ratio = getWassersteinDistance(a, b, dimensions=1)
+            intersect_ratio2 = getWassersteinDistance(b, a, dimensions=1)
+            print(intersect_ratio, intersect_ratio2)
             distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(base_data, other_data)
             for k_val in k_vals:
                 boundaries_real = distance_matrix_real[:, k_val]
                 boundaries_fake = distance_matrix_fake[:, k_val]
                 precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake,
                                                               boundaries_real, k_val)
-                row = [(high_param, other_high_param), k_val, intersect_ratio,
+                row = [(high_param, other_high_param), k_val, intersect_ratio2,
                        precision, recall, density, coverage]
                 row_data.append(row)
 
@@ -86,18 +97,17 @@ def showData(data_dict):
     for key, data in data_dict.items():
         plt.figure()
         plt.title(key)
-        plt.scatter(data[:, 0], data[:, 1])
+        y = np.zeros(data[:, 0].shape[0])
+        plt.scatter(data[:, 0], y)
 
 def doExperiment(params):
-    sample_size=1000
+    sample_size=2000
     dimension=1
     iters = 1
     k_vals = util.getParams(sample_size)
-    k_vals = [1, 2, 4, 8, 16, 32, 64]
-    print(params)
-    print(k_vals)
+    k_vals = [1, 2, 4, 8]
     distribution_dict = createDistributions(params, sample_size, iters)
-    showData(distribution_dict)
+    #showData(distribution_dict)
     dataframe = getDataframe(distribution_dict, k_vals)
     score_names = ["precision", "recall", "density", "coverage"]
     plotScores(dataframe, score_names)
