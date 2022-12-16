@@ -31,10 +31,18 @@ def getScores(truth, predictions):
 
     return fpr, fnr
 
-def getPredictions(mixture_data, real_params, fake_params, threshold):
+# TODO Refactor
+def getPredictions(mixture_data, real_params, fake_params, threshold, distribution_name=""):
     predictions = np.zeros(mixture_data.shape[0])
     # Mixture problem
-    if len(real_params) == 3:
+    if distribution_name == "exp":
+        densities_real = (real_params*np.exp(-real_params*mixture_data)*threshold).flatten()
+        densities_fake = (fake_params*np.exp(-fake_params*mixture_data)).flatten()
+        mean_abs_diff = np.sqrt(np.sum((densities_real-densities_fake)**2))
+        predictions[densities_real >= densities_fake] = 1
+        return predictions, mean_abs_diff
+    # Mixture problem
+    elif len(real_params) == 3:
         modes = real_params[0].shape[0]
         mode_weight = real_params[2]
         mode_weight_fake = fake_params[2]
@@ -59,40 +67,31 @@ def getPredictions(mixture_data, real_params, fake_params, threshold):
 
     predictions[densities_real >= densities_fake] = 1
 
-    return predictions
+    return predictions, 0
 
 def getPRCurve(mixture_samples, labels, lambdas,
-               real_params, fake_params):
+               real_params, fake_params, distribution_name=""):
     curve = np.zeros((lambdas.shape[0], 2))
-
-    # For boundary visualization in 2D
-    special_lambdas = [0, 0.5, 1, 1.5, 2]
-    real_samples = mixture_samples[labels == 1, :]
-    fake_samples = mixture_samples[labels == 0, :]
+    differences = []
     for row_index, lambda_val in enumerate(lambdas):
-        predictions = getPredictions(mixture_samples, real_params, fake_params, lambda_val)
+        predictions, mean_abs_diff = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
         fpr, fnr = getScores(labels, predictions)
+        differences.append(mean_abs_diff)
 
-        boolean_mask = np.isclose(lambda_val, special_lambdas)
-        if np.any(boolean_mask):
-            special_lambdas.pop(0)
-            plotting.showLabels(real_samples, fake_samples, mixture_samples, predictions,
-                                lambda_val, 1)
         precision = (fnr * lambda_val) + fpr
         recall = precision / lambda_val
         curve[row_index, 0] = precision
         curve[row_index, 1] = recall
 
-    return np.clip(curve, 0, 1)
+    return np.clip(curve, 0, 1), differences
 
 # TODO
 def getPRCurveTest(mixture_samples, labels, lambdas,
-               real_params, fake_params):
+               real_params, fake_params, distribution_name=""):
     curve = np.zeros((lambdas.shape[0], 2))
     errorRates = []
-    predictions = getPredictions(mixture_samples, real_params, fake_params, 1)
     for row_index, lambda_val in enumerate(lambdas):
-        predictions = getPredictions(mixture_samples, real_params, fake_params, lambda_val)
+        predictions, mean_abs_diff = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
         fpr, fnr = getScores(labels, predictions)
         errorRates.append((float(fpr), float(fnr)))
 

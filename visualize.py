@@ -231,3 +231,15 @@ def plotBars(score_dataframe, score_dataframe_extra, score_name):
    textBar(bars)
    textBar(bars2)
    plt.legend()
+
+def plotDistributions(data, data_other, title_text):
+    plt.title(title_text)
+    y = np.zeros(data.shape[0])
+    plt.scatter(data, y, s=2 ** 7)
+    plt.scatter(data_other, y, s=2 ** 6)
+
+def plotCurve(curves, title_text):
+    plt.title(title_text)
+    plt.xlim([0, 1.1])
+    plt.ylim([0, 1.1])
+    plt.scatter(curves[:, 0], curves[:, 1])

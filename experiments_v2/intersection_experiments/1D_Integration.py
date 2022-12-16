@@ -29,12 +29,11 @@ def plotScores(dataframe, score_names):
         plt.xticks(rotation=90)
         plt.ylabel("Score")
 
-
-def createDistributions(params, sample_size, iters):
+def createDistributions(params, sample_size, dimension, iters):
     functions = {}
     for param in params:
         for i in range(iters):
-            samples = np.random.exponential(param, size=(sample_size,1))
+            samples = np.random.exponential(param, size=(sample_size, dimension))
             functions[-param, param, i] = samples
 
     return functions
@@ -54,18 +53,18 @@ def getAreaCalc(base_param, other_param, x=10):
     return other_area / base_area
 
 def getWassersteinDistance(data, other_data, dimensions=1):
-    average_distance = 0
-    for dimension in range(dimensions):
-        average_distance += (wasserstein_distance(data[:, dimension], other_data[:, dimension]) / dimensions)
+    distance = wasserstein_distance(data[:, 0], other_data[:, 0])
 
-    return average_distance
+    return distance
 
-def testDistance(base_param, other_param):
+def getKlDivergence(base_param, compare_param):
+    return  np.log(base_param) - np.log(compare_param) + (compare_param / base_param) - 1
+def checkDistance(base_param, other_param):
     first_part = (-np.exp(-other_param) - 1) / other_param
     second_part = (-np.exp(-base_param) - 1) / base_param
     return first_part + second_part
 def getDataframe(distribution_dict, k_vals):
-    columns = ["key", "k_val", "intersection_ratio",
+    columns = ["key", "k_val", "intersection_ratio", "kl_score", "kl_reverse_score",
                "precision", "recall", "density", "coverage"]
     row_data = []
     for base_param, base_data in distribution_dict.items():
@@ -73,20 +72,17 @@ def getDataframe(distribution_dict, k_vals):
         for other_key, other_data in distribution_dict.items():
             other_high_param = other_key[1]
             max_element = max(np.max(base_data), np.max(other_data))
-            intersect_ratio = getAreaCalc(high_param, other_high_param, x=max_element)
-            intersect_ratio2 = getWassersteinDistance(base_data, other_data, dimensions=1)
-            a = np.sort(base_data, axis=0)
-            b = np.sort(other_data, axis=0)
-            intersect_ratio = getWassersteinDistance(a, b, dimensions=1)
-            intersect_ratio2 = getWassersteinDistance(b, a, dimensions=1)
-            print(intersect_ratio, intersect_ratio2)
+            intersect_ratio = getWassersteinDistance(base_data, other_data)
+            intersect_ratio = getKlDivergence(high_param, other_high_param)
+            kl_score = getKlDivergence(high_param, other_high_param)
+            kl_reverse_score = getKlDivergence(other_high_param, high_param)
             distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(base_data, other_data)
             for k_val in k_vals:
                 boundaries_real = distance_matrix_real[:, k_val]
                 boundaries_fake = distance_matrix_fake[:, k_val]
                 precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake,
                                                               boundaries_real, k_val)
-                row = [(high_param, other_high_param), k_val, intersect_ratio2,
+                row = [(high_param, other_high_param), k_val, intersect_ratio, kl_score, kl_reverse_score,
                        precision, recall, density, coverage]
                 row_data.append(row)
 
@@ -97,23 +93,24 @@ def showData(data_dict):
     for key, data in data_dict.items():
         plt.figure()
         plt.title(key)
-        y = np.zeros(data[:, 0].shape[0])
-        plt.scatter(data[:, 0], y)
+        plt.scatter(data[:, 0], data[:, 1])
+        break
 
 def doExperiment(params):
-    sample_size=2000
-    dimension=1
-    iters = 1
+    sample_size=1000
+    dimension=2
+    iters = 2
     k_vals = util.getParams(sample_size)
-    k_vals = [1, 2, 4, 8]
-    distribution_dict = createDistributions(params, sample_size, iters)
-    #showData(distribution_dict)
+    k_vals = [1, 2, 4, 8, 16, 32, 64]
+    distribution_dict = createDistributions(params, sample_size, dimension, iters)
+    showData(distribution_dict)
     dataframe = getDataframe(distribution_dict, k_vals)
+    corrs = dataframe.corr()
     score_names = ["precision", "recall", "density", "coverage"]
     plotScores(dataframe, score_names)
 
 
-params = np.arange(1, 10, step=2)
+params = np.arange(0.1, 1.1, step=.2)
 doExperiment(params)
 
 
