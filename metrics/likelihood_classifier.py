@@ -32,52 +32,43 @@ def getScores(truth, predictions):
     return fpr, fnr
 
 # TODO Refactor
+
+def getExponential(mixture_data, real_param, fake_param, threshold):
+    predictions = np.zeros(mixture_data.shape[0])
+    dimension = mixture_data.shape[1]
+    densities_real = 1
+    densities_fake = 1
+    for i in range(dimension):
+        densities_real *= (real_param * np.exp(-real_param * mixture_data[:, i])).flatten()
+        densities_fake *= (fake_param * np.exp(-fake_param * mixture_data[:, i])).flatten()
+    predictions[threshold*densities_real >= densities_fake] = 1
+
+    return predictions
 def getPredictions(mixture_data, real_params, fake_params, threshold, distribution_name=""):
     predictions = np.zeros(mixture_data.shape[0])
     # Mixture problem
     if distribution_name == "exp":
-        densities_real = (real_params*np.exp(-real_params*mixture_data)*threshold).flatten()
-        densities_fake = (fake_params*np.exp(-fake_params*mixture_data)).flatten()
-        mean_abs_diff = np.sqrt(np.sum((densities_real-densities_fake)**2))
-        predictions[densities_real >= densities_fake] = 1
-        return predictions, mean_abs_diff
-    # Mixture problem
-    elif len(real_params) == 3:
-        modes = real_params[0].shape[0]
-        mode_weight = real_params[2]
-        mode_weight_fake = fake_params[2]
-        densities_real = np.zeros(mixture_data.shape[0])
-        densities_fake = np.zeros(mixture_data.shape[0])
-        for i in range(modes):
-            mean_vector = real_params[0][i, :]
-            mean_vector_fake = fake_params[0][i, :]
-            # Assumes covariance stays the same
-            covariance = real_params[1]
-            covariance_fake = fake_params[1]
-
-            densities_mode = multivariate_normal.pdf(mixture_data, mean=mean_vector, cov=covariance) * mode_weight[i]
-            densities_fake_mode = multivariate_normal.pdf(mixture_data, mean=mean_vector_fake, cov=covariance_fake) * mode_weight_fake[i]
-            densities_real += densities_mode
-            densities_fake += densities_fake_mode
-        densities_real = densities_real*threshold
-
+        predictions = getExponential(mixture_data, real_params, fake_params, threshold)
+        return predictions
     else:
-        densities_real = multivariate_normal.pdf(mixture_data, mean=real_params[0], cov=real_params[1])*threshold
-        densities_fake = multivariate_normal.pdf(mixture_data, mean=fake_params[0], cov=fake_params[1])
+        dim = mixture_data.shape[1]
+        mean_vec = np.zeros(dim)
+        cov_real = np.eye(dim)*real_params
+        cov_fake = np.eye(dim)*fake_params
+        densities_real = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_real)
+        densities_fake = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_fake)
 
-    predictions[densities_real >= densities_fake] = 1
+    predictions[threshold*densities_real >= densities_fake] = 1
 
-    return predictions, 0
+    return predictions
 
 def getPRCurve(mixture_samples, labels, lambdas,
                real_params, fake_params, distribution_name=""):
     curve = np.zeros((lambdas.shape[0], 2))
     differences = []
     for row_index, lambda_val in enumerate(lambdas):
-        predictions, mean_abs_diff = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
+        predictions = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
         fpr, fnr = getScores(labels, predictions)
-        differences.append(mean_abs_diff)
-
         precision = (fnr * lambda_val) + fpr
         recall = precision / lambda_val
         curve[row_index, 0] = precision
@@ -102,3 +93,23 @@ def getPRCurveTest(mixture_samples, labels, lambdas,
         curve[row_index, 1] = recall
 
     return np.clip(curve, 0, 1)
+
+    # Mixture problem Backup
+    # elif len(real_params) == 3:
+    #     modes = real_params[0].shape[0]
+    #     mode_weight = real_params[2]
+    #     mode_weight_fake = fake_params[2]
+    #     densities_real = np.zeros(mixture_data.shape[0])
+    #     densities_fake = np.zeros(mixture_data.shape[0])
+    #     for i in range(modes):
+    #         mean_vector = real_params[0][i, :]
+    #         mean_vector_fake = fake_params[0][i, :]
+    #         # Assumes covariance stays the same
+    #         covariance = real_params[1]
+    #         covariance_fake = fake_params[1]
+    #
+    #         densities_mode = multivariate_normal.pdf(mixture_data, mean=mean_vector, cov=covariance) * mode_weight[i]
+    #         densities_fake_mode = multivariate_normal.pdf(mixture_data, mean=mean_vector_fake, cov=covariance_fake) * mode_weight_fake[i]
+    #         densities_real += densities_mode
+    #         densities_fake += densities_fake_mode
+    #     densities_real = densities_real*threshold

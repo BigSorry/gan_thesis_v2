@@ -1,7 +1,6 @@
 import numpy as np
-import experiments_v2.helper_functions as util
 import matplotlib.pyplot as plt
-import metrics.not_used.likelihood_classifier as llc
+import metrics.likelihood_classifier as llc
 import visualize as plotting
 
 def createDistributions(params, sample_size, dimension, iters):
