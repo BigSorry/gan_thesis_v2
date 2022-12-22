@@ -17,17 +17,18 @@ def getMixture(real, fake):
     return mixture, labels
 
 def getScores(truth, predictions):
-    # A positive result corresponds to rejecting the null hypothesis
-    # Null -> sample is from real data
-    correct_mask = truth == predictions
-    fp = truth[(correct_mask == False) & (truth == 0)].shape[0]
-    positives = np.sum(truth == 0)
+    # Null hypothesis mixture data is from real
+    # FPR false rejection null
+    # FNR failure to reject null
+    real_label = 1
+    fake_label = 0
+    real_samples = np.sum(truth == real_label)
+    fake_samples = np.sum(truth == fake_label)
+    fp =  np.sum((predictions==fake_label) & (truth==real_label))
+    fn =  np.sum((predictions==real_label) & (truth==fake_label))
 
-    fn = truth[(correct_mask == False) & (truth == 1)].shape[0]
-    negatives = np.sum(truth == 1)
-
-    fpr = fp / positives
-    fnr = fn / negatives
+    fpr = fp / real_samples
+    fnr = fn / fake_samples
 
     return fpr, fnr
 
@@ -69,7 +70,7 @@ def getPRCurve(mixture_samples, labels, lambdas,
     for row_index, lambda_val in enumerate(lambdas):
         predictions = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
         fpr, fnr = getScores(labels, predictions)
-        precision = (fnr * lambda_val) + fpr
+        precision = (fpr * lambda_val) + fnr
         recall = precision / lambda_val
         curve[row_index, 0] = precision
         curve[row_index, 1] = recall
@@ -87,7 +88,7 @@ def getPRCurveTest(mixture_samples, labels, lambdas,
         errorRates.append((float(fpr), float(fnr)))
 
     for row_index, lambda_val in enumerate(lambdas):
-        precision = np.min([(lambda_val * fnr) + fpr for fpr, fnr in errorRates])
+        precision = np.min([(fpr*lambda_val) + fnr for fpr, fnr in errorRates])
         recall = precision / lambda_val
         curve[row_index, 0] = precision
         curve[row_index, 1] = recall

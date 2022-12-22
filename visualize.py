@@ -234,13 +234,27 @@ def plotBars(score_dataframe, score_dataframe_extra, score_name):
 
 def plotDistributions(x, y, x2, y2, title_text):
     plt.title(title_text)
-    plt.scatter(x, y, alpha=0.5)
-    plt.scatter(x2, y2)
+    plt.scatter(x, y, alpha=0.5, label="Real data")
+    plt.scatter(x2, y2, label="Fake data")
+    plt.legend()
+
 
 def plotCurve(curves, title_text):
     plt.title(title_text)
     plt.xlim([0, 1.1])
     plt.ylim([0, 1.1])
-    plt.scatter(curves[:, 1], curves[:, 0])
+    plt.scatter(curves[:, 1], curves[:, 0], label="PR-Curve (Likelihood Classifier)")
     plt.xlabel("Recall")
     plt.ylabel("Precision")
+
+def specialAnnotate(text, coords, fontsize=12):
+    plt.annotate(text, coords,
+                 xytext=(10, -5), textcoords='offset points',
+                 family='sans-serif', fontsize=fontsize, color='darkslategrey')
+def plotAnnotate(series):
+    for k, v in series.iterrows():
+        text = v["k_val"]
+        precision_recall = (v["recall"], v["precision"])
+        density_coverage = (v["coverage"], v["density"])
+        specialAnnotate(text, precision_recall)
+        specialAnnotate(text, density_coverage)

@@ -42,8 +42,9 @@ def createDistributions(param_dict, sample_size, dimension, iters):
     return functions
 
 def getLikelihood(real_features, fake_features, real_param, fake_param, lambdas, distribution_name):
-    #    mixture_labels = np.concatenate([np.ones(real_features.shape[0]), np.zeros(fake_features.shape[0])])
-    mixture_samples, mixture_labels = llc.getMixture(real_features, fake_features)
+    mixture_samples = np.concatenate([real_features, fake_features])
+    mixture_labels = np.concatenate([np.ones(real_features.shape[0]), np.zeros(fake_features.shape[0])])
+    #mixture_samples, mixture_labels = llc.getMixture(real_features, fake_features)
     pr_curve, differences = llc.getPRCurve(mixture_samples, mixture_labels, lambdas, real_param,
                               fake_param, distribution_name=distribution_name)
 
@@ -62,6 +63,7 @@ def doPlots(dataframe, base_data, other_data, param_text, curves, title_text):
     plotting.plotCurve(curves, title_text)
     plt.scatter(dataframe["recall"], dataframe["precision"], c="red", label="Precision_Recall")
     plt.scatter(dataframe["coverage"], dataframe["density"], c="yellow", label="Density_Coverage")
+    plotting.plotAnnotate(dataframe)
     plt.legend()
     plt.subplot(1 ,2, 2)
     plotting.plotDistributions(base_data[:,0], base_data[:, 1], other_data[:, 0],
@@ -77,14 +79,14 @@ def getGausParams(scale_factors, dimension):
     return gaus_params
 def doExperiment():
     # Experiment params
-    sample_size=2000
-    dimension=2
+    sample_size = 1000
+    dimension = 2
     iters = 1
     pr_lambdas = getPRLambdas(angle_count=1000)
-    k_vals = [1, 2, 4, 8]
+    k_vals = [1, 7, sample_size-1]
     # Distribution parameters
     exp_params = [0.5, 1.5]
-    scale_factors = [.1, 1]
+    scale_factors = [0.5,  1]
     gaus_param = getGausParams(scale_factors, dimension)
     param_dict = {"distribution": "gaus", "params": gaus_param}
     #param_dict = {"distribution": "exp", "params": exp_params}
@@ -92,7 +94,7 @@ def doExperiment():
     distribution_dict = createDistributions(param_dict, sample_size, dimension, iters)
     dataframe = getDataframe(distribution_dict, k_vals)
     images = 0
-    max_images = 5
+    max_images = 2
     for base_param, base_data in distribution_dict.items():
         first_param = base_param[0]
         for other_param, other_data in distribution_dict.items():
