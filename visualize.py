@@ -239,11 +239,11 @@ def plotDistributions(x, y, x2, y2, title_text):
     plt.legend()
 
 
-def plotCurve(curves, title_text):
-    plt.title(title_text)
+def plotCurve(curve, label_text):
+    #plt.title(title_text)
     plt.xlim([0, 1.1])
     plt.ylim([0, 1.1])
-    plt.scatter(curves[:, 1], curves[:, 0], label="PR-Curve (Likelihood Classifier)")
+    plt.scatter(curve[:, 1], curve[:, 0], label=label_text)
     plt.xlabel("Recall")
     plt.ylabel("Precision")
 

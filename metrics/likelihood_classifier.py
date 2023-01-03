@@ -9,6 +9,7 @@ def getMixture(real, fake):
     for i in range(real.shape[0]):
         flip_coin = np.random.randint(2)
         if flip_coin == 0:
+            continue
             mixture[i, :] = fake[i, :]
         else:
             mixture[i, :] = real[i, :]
@@ -81,19 +82,19 @@ def getPRCurve(mixture_samples, labels, lambdas,
 def getPRCurveTest(mixture_samples, labels, lambdas,
                real_params, fake_params, distribution_name=""):
     curve = np.zeros((lambdas.shape[0], 2))
-    errorRates = []
+    curve2 = np.zeros((lambdas.shape[0], 2))
+    differences = []
     for row_index, lambda_val in enumerate(lambdas):
-        predictions, mean_abs_diff = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
+        predictions = getPredictions(mixture_samples, real_params, fake_params, lambda_val, distribution_name)
         fpr, fnr = getScores(labels, predictions)
-        errorRates.append((float(fpr), float(fnr)))
-
-    for row_index, lambda_val in enumerate(lambdas):
-        precision = np.min([(fpr*lambda_val) + fnr for fpr, fnr in errorRates])
+        precision = (fpr * lambda_val) + fnr
         recall = precision / lambda_val
-        curve[row_index, 0] = precision
-        curve[row_index, 1] = recall
+        curve[row_index, 0] = fpr
+        curve[row_index, 1] = fnr
+        curve2[row_index, 0] = precision
+        curve2[row_index, 1] = recall
 
-    return np.clip(curve, 0, 1)
+    return np.clip(curve, 0, 1), np.clip(curve2, 0, 1)
 
     # Mixture problem Backup
     # elif len(real_params) == 3:

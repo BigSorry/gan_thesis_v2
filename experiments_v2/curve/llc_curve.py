@@ -30,10 +30,10 @@ def createDistributions(param_dict, sample_size, dimension, iters):
     functions = {}
     for param in param_dict["params"]:
         for i in range(iters):
-            if param_dict["distribution"] == "exp":
+            if param_dict["distribution_name"] == "exp":
                 samples = np.random.exponential(param, size=(sample_size, dimension))
                 functions[param, i] = samples
-            elif param_dict["distribution"] == "gaus":
+            elif param_dict["distribution_name"] == "gaus":
                 mean_vec = param[0]
                 cov = param[1]
                 samples = np.random.multivariate_normal(mean_vec, cov, sample_size)
@@ -45,7 +45,7 @@ def getLikelihood(real_features, fake_features, real_param, fake_param, lambdas,
     mixture_samples = np.concatenate([real_features, fake_features])
     mixture_labels = np.concatenate([np.ones(real_features.shape[0]), np.zeros(fake_features.shape[0])])
     #mixture_samples, mixture_labels = llc.getMixture(real_features, fake_features)
-    pr_curve, differences = llc.getPRCurve(mixture_samples, mixture_labels, lambdas, real_param,
+    pr_curve, differences = llc.getPRCurveTest(mixture_samples, mixture_labels, lambdas, real_param,
                               fake_param, distribution_name=distribution_name)
 
     return pr_curve, differences
@@ -59,8 +59,10 @@ def getPRLambdas(angle_count = 50):
 
 def doPlots(dataframe, base_data, other_data, param_text, curves, title_text):
     plt.figure()
+    plt.title(title_text)
     plt.subplot(1, 2, 1)
-    plotting.plotCurve(curves, title_text)
+    for i, curve in enumerate(curves):
+        plotting.plotCurve(curve, f"Precision_Recall_Curve_{i}")
     plt.scatter(dataframe["recall"], dataframe["precision"], c="red", label="Precision_Recall")
     plt.scatter(dataframe["coverage"], dataframe["density"], c="yellow", label="Density_Coverage")
     plotting.plotAnnotate(dataframe)
@@ -77,38 +79,40 @@ def getGausParams(scale_factors, dimension):
         gaus_params.append([mean, cov])
 
     return gaus_params
-def doExperiment():
-    # Experiment params
-    sample_size = 1000
-    dimension = 2
-    iters = 1
-    pr_lambdas = getPRLambdas(angle_count=1000)
-    k_vals = [1, 7, sample_size-1]
-    # Distribution parameters
-    exp_params = [0.5, 1.5]
-    scale_factors = [0.5,  1]
-    gaus_param = getGausParams(scale_factors, dimension)
-    param_dict = {"distribution": "gaus", "params": gaus_param}
-    #param_dict = {"distribution": "exp", "params": exp_params}
-    # Prep data
-    distribution_dict = createDistributions(param_dict, sample_size, dimension, iters)
-    dataframe = getDataframe(distribution_dict, k_vals)
+
+def showLLC(distribution_dict, dataframe, distribution_name):
     images = 0
-    max_images = 2
+    max_images = 20
+    pr_lambdas = getPRLambdas(angle_count=1000)
     for base_param, base_data in distribution_dict.items():
         first_param = base_param[0]
         for other_param, other_data in distribution_dict.items():
             second_param = other_param[0]
             param_text = f"{first_param}_{second_param}"
             if images < max_images and first_param != second_param:
-                curves, differences = getLikelihood(base_data, other_data, first_param, second_param, pr_lambdas, param_dict["distribution"])
+                curve1, curve2 = getLikelihood(base_data, other_data, first_param, second_param, pr_lambdas, distribution_name)
+                curves = [curve1, curve2]
                 doPlots(dataframe, base_data, other_data, param_text,
                         curves, param_text)
 
-                images+=1
+                images += 1
 
-
-
+def doExperiment():
+    # Experiment params
+    sample_size = 1000
+    dimension = 2
+    iters = 1
+    k_vals = [1, 2, 4, 8, 16, 32, sample_size-1]
+    # Distribution parameters
+    exp_params = [0.5, 1.5]
+    scale_factors = [0.1, .5, 0.9, 1, 10]
+    gaus_param = getGausParams(scale_factors, dimension)
+    param_dict = {"distribution_name": "gaus", "params": gaus_param}
+    #param_dict = {"distribution": "exp", "params": exp_params}
+    # Prep data
+    distribution_dict = createDistributions(param_dict, sample_size, dimension, iters)
+    dataframe = getDataframe(distribution_dict, k_vals)
+    showLLC(distribution_dict, dataframe, param_dict["distribution_name"])
 
 doExperiment()
 plt.show()
