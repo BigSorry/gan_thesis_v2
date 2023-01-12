@@ -82,7 +82,7 @@ def getGausParams(scale_factors, dimension):
 
 def showLLC(distribution_dict, dataframe, distribution_name):
     images = 0
-    max_images = 20
+    max_images = 4
     pr_lambdas = getPRLambdas(angle_count=1000)
     for base_param, base_data in distribution_dict.items():
         first_param = base_param[0]
@@ -99,7 +99,7 @@ def showLLC(distribution_dict, dataframe, distribution_name):
 
 def doExperiment():
     # Experiment params
-    sample_size = 1000
+    sample_size = 100
     dimension = 2
     iters = 1
     k_vals = [1, 2, 4, 8, 16, 32, sample_size-1]

@@ -68,6 +68,11 @@ def getDistanceMatrices(real_features, fake_features):
 
     return distance_matrix_real, distance_matrix_fake, distance_matrix_pairs
 
+def getDistanceMatrix(features, features_other):
+    distance_matrix = pairwise_distances(features, features_other, metric='euclidean')
+    distance_matrix = np.sort(distance_matrix, axis=1)
+    return distance_matrix
+
 def getBoundaries(real_features, fake_features, k):
     distance_matrix_real = pairwise_distances(real_features, real_features, metric='euclidean')
     distance_matrix_fake = pairwise_distances(fake_features, fake_features, metric='euclidean')

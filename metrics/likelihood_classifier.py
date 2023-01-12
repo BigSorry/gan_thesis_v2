@@ -9,7 +9,6 @@ def getMixture(real, fake):
     for i in range(real.shape[0]):
         flip_coin = np.random.randint(2)
         if flip_coin == 0:
-            continue
             mixture[i, :] = fake[i, :]
         else:
             mixture[i, :] = real[i, :]

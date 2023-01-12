@@ -4,8 +4,7 @@ import experiments_v2.helper_functions as util
 import matplotlib.pyplot as plt
 import metrics.likelihood_classifier as llc
 import visualize as plotting
-import experiments_v2.curve.llc_curve as llc
-
+import experiments_v2.curve.llc_curve as llc_curve
 # knn and llc
 def getDataframe(distribution_dict, k_vals):
     columns = ["key", "k_val",
@@ -34,10 +33,10 @@ def prepData():
     iters = 1
     k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
     scale_factors = [0.1, 1]
-    gaus_param = llc.getGausParams(scale_factors, dimension)
+    gaus_param = llc_curve.getGausParams(scale_factors, dimension)
     param_dict = {"distribution_name": "gaus", "params": gaus_param}
-    distribution_dict = llc.createDistributions(param_dict, sample_size, dimension, iters)
-    dataframe = llc.getDataframe(distribution_dict, k_vals)
+    distribution_dict = llc_curve.createDistributions(param_dict, sample_size, dimension, iters)
+    dataframe = llc_curve.getDataframe(distribution_dict, k_vals)
 
     return dataframe, distribution_dict
 
