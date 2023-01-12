@@ -15,7 +15,7 @@ def getDistributions(sample_size, dimension, scale_param):
     return distributions
 
 def doKNNS(mixture_dict, test_data, k_vals, label_value):
-    test_labels = np.array(label_value for i in range(test_data.shape[0]))
+    test_labels = np.array([label_value for i in range(test_data.shape[0])])
     for ber_p, data_dict in mixture_dict.items():
         mixture_data = data_dict["train_data"]
         mixture_label = data_dict["train_label"]
@@ -27,15 +27,9 @@ def doKNNS(mixture_dict, test_data, k_vals, label_value):
             truth_table = (distance_pairs < row_form)
             predictions = truth_table.any(axis=1).astype(int)
             fpr, fnr = llc.getScores(test_labels, predictions)
-            print(fpr, fnr)
+            print(f"Ber {ber_p} with k_val {k_val}, \n fpr {fpr} and fnr {fnr}\n")
 
     return 0
-
-def plotScores(scores, scores_union):
-    plt.figure()
-    plt.scatter(scores[:, 1], scores[:, 0])
-    plt.xlim([0, 1.1])
-    plt.ylim([0, 1.1])
 
 def takeSamples(data, indices, p):
     sample_size = data.shape[0]
@@ -57,7 +51,7 @@ def doMixture(real_data, fake_data):
     return mixture_dict
 
 def doExpiriment():
-    sample_size = 100
+    sample_size = 2000
     dimension = 2
     scale_factors = [0.1, 1]
     k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
