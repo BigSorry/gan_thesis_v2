@@ -16,20 +16,22 @@ def getDistributions(sample_size, dimension, scale_param):
 
 def doKNNS(mixture_dict, test_data, k_vals, label_value):
     test_labels = np.array([label_value for i in range(test_data.shape[0])])
+    error_rates = {}
     for ber_p, data_dict in mixture_dict.items():
         mixture_data = data_dict["train_data"]
         mixture_label = data_dict["train_label"]
         distance_matrix = util.getDistanceMatrix(mixture_data, mixture_data)
         distance_pairs = util.getDistanceMatrix(test_data, mixture_data)
+        error_rates[ber_p] = {}
         for k_val in k_vals:
             boundaries_union = distance_matrix[:, k_val]
             row_form = np.expand_dims(boundaries_union, axis=0)
             truth_table = (distance_pairs < row_form)
             predictions = truth_table.any(axis=1).astype(int)
             fpr, fnr = llc.getScores(test_labels, predictions)
-            print(f"Ber {ber_p} with k_val {k_val}, \n fpr {fpr} and fnr {fnr}\n")
+            error_rates[ber_p][k_val] = [fpr, fnr]
 
-    return 0
+    return error_rates
 
 def takeSamples(data, indices, p):
     sample_size = data.shape[0]
@@ -50,18 +52,46 @@ def doMixture(real_data, fake_data):
 
     return mixture_dict
 
+def doPlotting(error_dict):
+    fig, (ax1,ax2) = plt.subplots(1, 2, sharex=True, sharey=True)
+    plt.title("Mixture Z= p.R + (1-p).F")
+    ber_ps = list(error_dict.keys())
+    plt.ylim([0, 1.1])
+    x_axes = (np.arange(len(ber_ps))+1)*2
+    i=2
+    for ber_p, ber_dict in error_dict.items():
+        scores = np.array(list(ber_dict.values()))
+        fpr = scores[:, 0]
+        fnr = scores[:, 1]
+        ax1.boxplot(fpr, positions=[i])
+        ax2.boxplot(fnr, positions=[i])
+        i+=2
+
+
+    ax1.set_ylabel("FPR")
+    string_labels = [f"p={p}" for p in ber_ps]
+    plt.xticks(x_axes, string_labels)
+    ax1.set_xticks(x_axes)
+    ax1.set_xticklabels(string_labels)
+    ax1.set_xlim(0, np.max(x_axes)+2)
+
+
+    ax2.set_ylabel("FNR")
+
 def doExpiriment():
     sample_size = 2000
     dimension = 2
-    scale_factors = [0.1, 1]
+    scale_factors = [0.01, 1]
     k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
     distributions = getDistributions(sample_size, dimension, scale_factors)
     test_distribution = getDistributions(sample_size, dimension, scale_factors)
     real_data = distributions[0]
     fake_data = distributions[1]
     mixture_dict = doMixture(real_data, fake_data)
-    doKNNS(mixture_dict, real_data, k_vals, label_value=1)
-    doKNNS(mixture_dict, fake_data, k_vals, label_value=0)
+    errors_real = doKNNS(mixture_dict, real_data, k_vals, label_value=1)
+    errors_fake = doKNNS(mixture_dict, fake_data, k_vals, label_value=0)
+    doPlotting(errors_real)
+    doPlotting(errors_fake)
 
 doExpiriment()
 plt.show()

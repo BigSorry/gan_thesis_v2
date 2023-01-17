@@ -22,13 +22,14 @@ def getScores(truth, predictions):
     # FNR failure to reject null
     real_label = 1
     fake_label = 0
+    epsilon = 1e-10
     real_samples = np.sum(truth == real_label)
     fake_samples = np.sum(truth == fake_label)
     fp =  np.sum((predictions==fake_label) & (truth==real_label))
     fn =  np.sum((predictions==real_label) & (truth==fake_label))
 
-    fpr = fp / real_samples
-    fnr = fn / fake_samples
+    fpr = fp / (real_samples+epsilon)
+    fnr = fn / (fake_samples+epsilon)
 
     return fpr, fnr
 
