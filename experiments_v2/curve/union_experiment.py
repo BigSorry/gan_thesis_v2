@@ -4,6 +4,7 @@ import experiments_v2.helper_functions as util
 import matplotlib.pyplot as plt
 import metrics.likelihood_classifier as llc
 from sklearn.metrics import pairwise_distances
+import experiments_v2.curve.likelihood_estimations as ll_est
 
 def getDistributions(sample_size, dimension, scale_param):
     distributions = []
@@ -78,10 +79,26 @@ def doPlotting(error_dict):
 
     ax2.set_ylabel("FNR")
 
+def getGroundTruth(real_data, fake_data, scale_factors):
+    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name="multi_gaus")
+    densities_real_norm = densities_real / np.sum(densities_real)
+    densities_fake_norm = densities_fake / np.sum(densities_fake)
+    predictions = (densities_real >= densities_fake).astype(int)
+    densities_diff = np.sum(np.abs(densities_real_norm - densities_fake_norm))
+    precision_hist = recall_hist = 1 - densities_diff
+    truth_labels = np.concatenate([np.ones(real_data.shape[0]), np.zeros(fake_data.shape[0])])
+    fpr, fnr = llc.getScores(truth_labels, predictions)
+    precision_class = recall_class = fpr + fnr
+
+    print(precision_hist, recall_hist)
+    print(precision_class, recall_class)
+    return precision_class, recall_class
+
+
 def doExpiriment():
-    sample_size = 2000
+    sample_size = 1000
     dimension = 2
-    scale_factors = [0.01, 1]
+    scale_factors = [.1, 1]
     k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
     distributions = getDistributions(sample_size, dimension, scale_factors)
     test_distribution = getDistributions(sample_size, dimension, scale_factors)
@@ -90,6 +107,7 @@ def doExpiriment():
     mixture_dict = doMixture(real_data, fake_data)
     errors_real = doKNNS(mixture_dict, real_data, k_vals, label_value=1)
     errors_fake = doKNNS(mixture_dict, fake_data, k_vals, label_value=0)
+    fpr, fnr = getGroundTruth(real_data, fake_data, scale_factors)
     doPlotting(errors_real)
     doPlotting(errors_fake)
 
