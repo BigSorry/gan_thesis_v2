@@ -115,18 +115,23 @@ def showGroundTruth(real_data, fake_data, scale_factors):
 def showKNN(real_data, fake_data, k_vals):
     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_data, fake_data)
     #plt.figure()
-    for k_val in k_vals:
+    pr_pairs = np.zeros((k_vals.shape[0], 2))
+    dc_pairs = np.zeros((k_vals.shape[0], 2))
+    for i, k_val in enumerate(k_vals):
         boundaries_real = distance_matrix_real[:, k_val]
         boundaries_fake = distance_matrix_fake[:, k_val]
         precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
-        plt.scatter(recall, precision, c="red", label=f"Precision_Recall_k{k_val}")
-        plt.scatter(precision, density, c="yellow", label=f"Density_Coverage_{k_val}")
+        pr_pairs[i, :] = [precision, recall]
+        dc_pairs[i, :] = [density, coverage]
 
+    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall")
+    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage")
+    plt.legend()
 
 def doExpiriment():
     sample_size = 1000
     dimension = 2
-    var_factors = [0.1, 0.25, 0.5, 0.75, 1, 10, 100]
+    var_factors = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 10, 100, 1000]
     for factor in var_factors:
         scale_factors = [1, factor]
         distributions = getDistributions(sample_size, dimension, scale_factors)
@@ -138,7 +143,7 @@ def doExpiriment():
         showGroundTruth(real_data, fake_data, scale_factors)
         k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
         k_vals = np.arange(1, sample_size, 5)
-        print(k_vals)
+        k_vals = np.array([1, sample_size-1])
         showKNN(real_data, fake_data, k_vals)
 
 
