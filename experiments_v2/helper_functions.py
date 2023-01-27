@@ -87,6 +87,7 @@ def getBoundaries(real_features, fake_features, k):
 
     return boundaries_real, boundaries_fake, distance_matrix_pairs
 
+
 def getScoreMask(boundaries_real, boundaries_fake, distance_matrix_pairs):
     recall_mask = (distance_matrix_pairs < np.expand_dims(boundaries_fake, axis=0)).any(axis=1)
     coverage_mask = (distance_matrix_pairs.min(axis=1) < boundaries_real)

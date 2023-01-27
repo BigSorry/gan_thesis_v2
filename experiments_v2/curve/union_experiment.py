@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import metrics.likelihood_classifier as llc
 from sklearn.metrics import pairwise_distances
 import experiments_v2.curve.likelihood_estimations as ll_est
-
+import visualize as plotting
+import experiments_v2.helper_functions as util
 def getDistributions(sample_size, dimension, scale_param):
     distributions = []
     mean_vec = np.zeros(dimension)
@@ -79,37 +80,67 @@ def doPlotting(error_dict):
 
     ax2.set_ylabel("FNR")
 
+def plotCurve(curve_classifier, curve_var_dist):
+    plotting.plotCurve(curve_classifier, label_text="Likelihood ratio test")
+    plotting.plotCurve(curve_var_dist, label_text="Variational distance")
+    plt.legend()
+
+
 def getGroundTruth(real_data, fake_data, scale_factors):
+    lambdas = llc.getPRLambdas(angle_count=1000)
     densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name="multi_gaus")
     densities_real_norm = densities_real / np.sum(densities_real)
     densities_fake_norm = densities_fake / np.sum(densities_fake)
-    predictions = (densities_real >= densities_fake).astype(int)
-    densities_diff = np.sum(np.abs(densities_real_norm - densities_fake_norm))
-    precision_hist = recall_hist = 1 - densities_diff
-    truth_labels = np.concatenate([np.ones(real_data.shape[0]), np.zeros(fake_data.shape[0])])
-    fpr, fnr = llc.getScores(truth_labels, predictions)
-    precision_class = recall_class = fpr + fnr
 
-    print(precision_hist, recall_hist)
-    print(precision_class, recall_class)
-    return precision_class, recall_class
+    curve_class = []
+    curve_distance = []
+    for value in lambdas:
+        predictions = (value*densities_real >= densities_fake).astype(int)
+        precision_hist = value*1 - np.sum(np.abs(value*densities_real_norm - densities_fake_norm))
+        recall_hist = (1/value)*1 - np.sum(np.abs(densities_real_norm - densities_fake_norm*(1/value)))
+        truth_labels = np.concatenate([np.ones(real_data.shape[0]), np.zeros(fake_data.shape[0])])
+        fpr, fnr = llc.getScores(truth_labels, predictions)
+        precision_class = value*fpr + fnr
+        recall_class = precision_class / value
+        curve_class.append([precision_class, recall_class])
+        curve_distance.append([precision_hist, recall_hist])
+
+    return np.array(curve_class), np.array(curve_distance)
+
+
+def showGroundTruth(real_data, fake_data, scale_factors):
+    curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
+    plotCurve(curve_classifier, curve_var_dist)
+
+def showKNN(real_data, fake_data, k_vals):
+    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_data, fake_data)
+    #plt.figure()
+    for k_val in k_vals:
+        boundaries_real = distance_matrix_real[:, k_val]
+        boundaries_fake = distance_matrix_fake[:, k_val]
+        precision, recall, density, coverage = util.getScores(distance_matrix_pairs, boundaries_fake, boundaries_real, k_val)
+        plt.scatter(recall, precision, c="red", label=f"Precision_Recall_k{k_val}")
+        plt.scatter(precision, density, c="yellow", label=f"Density_Coverage_{k_val}")
 
 
 def doExpiriment():
     sample_size = 1000
     dimension = 2
-    scale_factors = [.1, 1]
-    k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
-    distributions = getDistributions(sample_size, dimension, scale_factors)
-    test_distribution = getDistributions(sample_size, dimension, scale_factors)
-    real_data = distributions[0]
-    fake_data = distributions[1]
-    mixture_dict = doMixture(real_data, fake_data)
-    errors_real = doKNNS(mixture_dict, real_data, k_vals, label_value=1)
-    errors_fake = doKNNS(mixture_dict, fake_data, k_vals, label_value=0)
-    fpr, fnr = getGroundTruth(real_data, fake_data, scale_factors)
-    doPlotting(errors_real)
-    doPlotting(errors_fake)
+    var_factors = [0.1, 0.25, 0.5, 0.75, 1, 10, 100]
+    for factor in var_factors:
+        scale_factors = [1, factor]
+        distributions = getDistributions(sample_size, dimension, scale_factors)
+        real_data = distributions[0]
+        fake_data = distributions[1]
+
+        plt.figure()
+        plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
+        showGroundTruth(real_data, fake_data, scale_factors)
+        k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
+        k_vals = np.arange(1, sample_size, 5)
+        print(k_vals)
+        showKNN(real_data, fake_data, k_vals)
+
 
 doExpiriment()
 plt.show()

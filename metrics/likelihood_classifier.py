@@ -3,6 +3,14 @@ import numpy as np
 import visualize as plotting
 from scipy.stats import multivariate_normal
 
+
+def getPRLambdas(angle_count = 50):
+    epsilon = 1e-10
+    angles = np.linspace(epsilon, np.pi / 2 - epsilon, num=angle_count)
+    lambdas = np.tan(angles)
+
+    return lambdas
+
 def getMixture(real, fake):
     mixture = np.zeros(real.shape)
     labels = np.zeros(real.shape[0])

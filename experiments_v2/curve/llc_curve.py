@@ -50,13 +50,6 @@ def getLikelihood(real_features, fake_features, real_param, fake_param, lambdas,
 
     return pr_curve, differences
 
-def getPRLambdas(angle_count = 50):
-    epsilon = 1e-10
-    angles = np.linspace(epsilon, np.pi / 2 - epsilon, num=angle_count)
-    lambdas = np.tan(angles)
-
-    return lambdas
-
 def doPlots(dataframe, base_data, other_data, param_text, curves, title_text):
     plt.figure()
     plt.title(title_text)
@@ -83,7 +76,7 @@ def getGausParams(scale_factors, dimension):
 def showLLC(distribution_dict, dataframe, distribution_name):
     images = 0
     max_images = 4
-    pr_lambdas = getPRLambdas(angle_count=1000)
+    pr_lambdas = llc.getPRLambdas(angle_count=1000)
     for base_param, base_data in distribution_dict.items():
         first_param = base_param[0]
         for other_param, other_data in distribution_dict.items():
