@@ -7,6 +7,9 @@ from sklearn.metrics import pairwise_distances
 import experiments_v2.curve.likelihood_estimations as ll_est
 import visualize as plotting
 import experiments_v2.helper_functions as util
+import metrics.not_used.metrics as mtr
+from sklearn.neighbors import KNeighborsClassifier
+
 def getDistributions(sample_size, dimension, scale_param):
     distributions = []
     mean_vec = np.zeros(dimension)
@@ -114,7 +117,6 @@ def showGroundTruth(real_data, fake_data, scale_factors):
 
 def showKNN(real_data, fake_data, k_vals):
     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_data, fake_data)
-    #plt.figure()
     pr_pairs = np.zeros((k_vals.shape[0], 2))
     dc_pairs = np.zeros((k_vals.shape[0], 2))
     for i, k_val in enumerate(k_vals):
@@ -124,9 +126,15 @@ def showKNN(real_data, fake_data, k_vals):
         pr_pairs[i, :] = [precision, recall]
         dc_pairs[i, :] = [density, coverage]
 
-    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall")
-    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage")
-    plt.legend()
+    return [pr_pairs, dc_pairs]
+def getCurves(real_data, fake_data):
+    params = {"k_cluster": 20, "angles": 1001, "kmeans_runs": 2}
+    pr_score, curve, cluster_labels = mtr.getHistoPR(real_data, fake_data, params)
+    classifier = KNeighborsClassifier(n_neighbors=1)
+    params = {"threshold_count": 100, "angles": 1001, "classifier": classifier}
+    pr_score, curve2, prob_labels = mtr.getClassifierPR(real_data, fake_data, params)
+
+    return [curve, curve2]
 
 def doExpiriment():
     sample_size = 1000
@@ -144,7 +152,14 @@ def doExpiriment():
         k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
         k_vals = np.arange(1, sample_size, 5)
         k_vals = np.array([1, sample_size-1])
-        showKNN(real_data, fake_data, k_vals)
+        pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
+        pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
+
+        plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall_KNN")
+        plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage_KNN")
+        plt.scatter(pr_curve_histo[:, 1], pr_curve_histo[:, 0], c="green", label=f"Precision_Recall_Histo_Curve")
+        plt.scatter(pr_curve_class[:, 1], pr_curve_class[:, 0], c="black", label=f"Precision_Recall_Class_Curve")
+        plt.legend()
 
 
 doExpiriment()

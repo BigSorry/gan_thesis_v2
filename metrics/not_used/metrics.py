@@ -4,8 +4,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
 import experiment_utils as util
 import metrics.improved_precision_recall as ipr
-import metrics.precision_recall_histogram as prh
-import metrics.precision_recall_classifier as prc
+import metrics.not_used.precision_recall_histogram as prh
+import metrics.not_used.precision_recall_classifier as prc
 import metrics.likelihood_classifier as llc
 import metrics.diversity_coverage as dc
 import metrics.improved_precision_recall as ipr
@@ -66,7 +66,7 @@ def getClassifierLikelihoodPR(real_features, fake_features, params):
 def getClassifierPR(real_features, fake_features, params):
     threshold_count = params["threshold_count"]
     angle_count = params["angles"]
-    classifier = params["classifier"]["object"]
+    classifier = params["classifier"]
     lambdas = util.getLambdas(angle_count)
     #beta_score = params["beta_score"]
     train, test, train_labels, test_labels = prc.createTrainTest(real_features, fake_features)
