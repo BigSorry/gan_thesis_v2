@@ -88,7 +88,6 @@ def plotCurve(curve_classifier, curve_var_dist):
     plotting.plotCurve(curve_var_dist, label_text="Variational distance")
     plt.legend()
 
-
 def getGroundTruth(real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
     densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name="multi_gaus")
@@ -109,11 +108,6 @@ def getGroundTruth(real_data, fake_data, scale_factors):
         curve_distance.append([precision_hist, recall_hist])
 
     return np.array(curve_class), np.array(curve_distance)
-
-
-def showGroundTruth(real_data, fake_data, scale_factors):
-    curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
-    plotCurve(curve_classifier, curve_var_dist)
 
 def showKNN(real_data, fake_data, k_vals):
     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_data, fake_data)
@@ -136,30 +130,64 @@ def getCurves(real_data, fake_data):
 
     return [curve, curve2]
 
+def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=True):
+    plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
+    plotCurve(curve_classifier, curve_var_dist)
+    if save:
+        path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/ground-truths/scale_{scale_factors}.png"
+        plt.savefig(path)
+
+def plotKNNMetrics(pr_pairs, dc_pairs, scale_factors, save=True):
+    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall_KNN")
+    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage_KNN")
+    plt.legend()
+    if save:
+        path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/knn/scale_{scale_factors}.png"
+        plt.savefig(path)
+
+def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
+    plt.scatter(histo_method[:, 1], histo_method[:, 0], c="green", label=f"Precision_Recall_Histo_Curve")
+    plt.scatter(classifier_method[:, 1], classifier_method[:, 0], c="black", label=f"Precision_Recall_Class_Curve")
+    plt.legend()
+    if save:
+        path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/all/scale_{scale_factors}.png"
+        plt.savefig(path)
+
+def getDistance(curve, metric_points):
+    distance_matrix = util.getDistanceMatrix(curve, metric_points)
+    smallest_distance = np.min(distance_matrix[:, 0])
+
+    return smallest_distance
+
 def doExpiriment():
     sample_size = 1000
     dimension = 2
     var_factors = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 10, 100, 1000]
+    curve_methods = False
+    knn_methods = True
     for factor in var_factors:
         scale_factors = [1, factor]
         distributions = getDistributions(sample_size, dimension, scale_factors)
         real_data = distributions[0]
         fake_data = distributions[1]
+        curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
+        k_vals = np.array([1, 2, 4, 8, 16, 32, sample_size - 1])
+        k_vals = np.array([1, 3, 5, 7, 9])
+        #k_vals = np.arange(1, sample_size, 5)
 
-        plt.figure()
-        plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
-        showGroundTruth(real_data, fake_data, scale_factors)
-        k_vals = [1, 2, 4, 8, 16, 32, sample_size - 1]
-        k_vals = np.arange(1, sample_size, 5)
-        k_vals = np.array([1, sample_size-1])
-        pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
-        pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
-
-        plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall_KNN")
-        plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage_KNN")
-        plt.scatter(pr_curve_histo[:, 1], pr_curve_histo[:, 0], c="green", label=f"Precision_Recall_Histo_Curve")
-        plt.scatter(pr_curve_class[:, 1], pr_curve_class[:, 0], c="black", label=f"Precision_Recall_Class_Curve")
-        plt.legend()
+        if knn_methods:
+            pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
+            pr_distance = getDistance(curve_var_dist, pr_pairs)
+            dr_distance = getDistance(curve_var_dist, dc_pairs)
+            print(pr_distance, dr_distance)
+            if pr_distance < 0.1 or dr_distance < 0.1:
+                plt.figure()
+                plt.title(f"PR distance {pr_distance} and DR distance {dr_distance}")
+                plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
+                plotKNNMetrics(pr_pairs, dc_pairs, scale_factors, save=False)
+        if curve_methods:
+            pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
+            plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
 
 
 doExpiriment()
