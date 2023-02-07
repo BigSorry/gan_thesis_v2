@@ -159,10 +159,12 @@ def getDistance(curve, metric_points):
 
     return smallest_distance
 
+def showData(real_data, fake_data):
+    plotting.plotD
 def doExpiriment():
     sample_size = 1000
-    dimension = 2
-    var_factors = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 10, 100, 1000]
+    dimension = 4
+    var_factors = [0.01, 0.1, 0.2,  0.25, 0.5, 1]
     curve_methods = False
     knn_methods = True
     for factor in var_factors:
@@ -180,11 +182,15 @@ def doExpiriment():
             pr_distance = getDistance(curve_var_dist, pr_pairs)
             dr_distance = getDistance(curve_var_dist, dc_pairs)
             print(pr_distance, dr_distance)
-            if pr_distance < 0.1 or dr_distance < 0.1:
+            if pr_distance < 0.1 or dr_distance < 0.1 or 1==1:
                 plt.figure()
+                plt.subplot(1, 2, 1)
                 plt.title(f"PR distance {pr_distance} and DR distance {dr_distance}")
                 plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
                 plotKNNMetrics(pr_pairs, dc_pairs, scale_factors, save=False)
+                plt.subplot(1, 2, 2)
+                plotting.plotDistributions(real_data, fake_data, "")
+
         if curve_methods:
             pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
             plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
