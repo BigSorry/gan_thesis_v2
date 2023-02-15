@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import experiments_v2.helper_functions as util
@@ -137,20 +138,28 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
         path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/ground-truths/scale_{scale_factors}.png"
         plt.savefig(path)
 
-def plotKNNMetrics(pr_pairs, dc_pairs, scale_factors, save=True):
+# Plotting is reversed to get recall on x axis
+def plotKNNMetrics(pr_pairs, dc_pairs, k_values, save_path, save=True):
+    annotate_text = [f"k={k}" for k in k_values]
     plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall_KNN")
     plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage_KNN")
-    plt.legend()
+    for index, text in enumerate(annotate_text):
+        pr_coords = (pr_pairs[index, 1], pr_pairs[index, 0])
+        dc_coords = (dc_pairs[index, 1], dc_pairs[index, 0])
+        plotting.specialAnnotate(text, pr_coords)
+        plotting.specialAnnotate(text, dc_coords)
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+               fancybox=True, shadow=True, ncol=2)
     if save:
-        path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/knn/scale_{scale_factors}.png"
-        plt.savefig(path)
+        plt.savefig(save_path)
+        plt.close()
 
 def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
     plt.scatter(histo_method[:, 1], histo_method[:, 0], c="green", label=f"Precision_Recall_Histo_Curve")
     plt.scatter(classifier_method[:, 1], classifier_method[:, 0], c="black", label=f"Precision_Recall_Class_Curve")
     plt.legend()
     if save:
-        path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/all/scale_{scale_factors}.png"
+        path = f"C:/Users/lexme/Documents/gan_thesis_v2/plot_paper/gaussian/scale_{scale_factors}.png"
         plt.savefig(path)
 
 def getDistance(curve, metric_points):
@@ -159,12 +168,13 @@ def getDistance(curve, metric_points):
 
     return smallest_distance
 
-def showData(real_data, fake_data):
-    plotting.plotD
-def doExpiriment():
-    sample_size = 1000
-    dimension = 4
+def doExpiriment(sample_size, dimension):
+    pc_save_map = f"C:/Users/Lex/Documents/gan_thesis_v2/plot_paper/gaussian/" \
+                  f"s{sample_size}_d{dimension}/"
+    if not os.path.isdir(pc_save_map):
+        os.makedirs(pc_save_map)
     var_factors = [0.01, 0.1, 0.2,  0.25, 0.5, 1]
+    var_factors = [0.01, 0.1, 0.2, 0.25, 0.5, 0.75, 1]
     curve_methods = False
     knn_methods = True
     for factor in var_factors:
@@ -174,27 +184,33 @@ def doExpiriment():
         fake_data = distributions[1]
         curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
         k_vals = np.array([1, 2, 4, 8, 16, 32, sample_size - 1])
-        k_vals = np.array([1, 3, 5, 7, 9])
-        #k_vals = np.arange(1, sample_size, 5)
+        #k_vals = np.array([1, 3, 5, 7, 9])
+        k_vals = np.arange(1, sample_size, 5)
 
         if knn_methods:
             pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
             pr_distance = getDistance(curve_var_dist, pr_pairs)
             dr_distance = getDistance(curve_var_dist, dc_pairs)
-            print(pr_distance, dr_distance)
+            #print(pr_distance, dr_distance)
             if pr_distance < 0.1 or dr_distance < 0.1 or 1==1:
-                plt.figure()
+                plt.figure(figsize=(12, 10))
+                save_path = f"{pc_save_map}params_r{scale_factors[0]}_f{scale_factors[1]}.png"
                 plt.subplot(1, 2, 1)
                 plt.title(f"PR distance {pr_distance} and DR distance {dr_distance}")
                 plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-                plotKNNMetrics(pr_pairs, dc_pairs, scale_factors, save=False)
+                plotKNNMetrics(pr_pairs, dc_pairs, k_vals, save_path, save=False)
                 plt.subplot(1, 2, 2)
-                plotting.plotDistributions(real_data, fake_data, "")
+                plotting.plotDistributions(real_data, fake_data, "", save_path, save=True)
 
         if curve_methods:
             pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
             plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
 
 
-doExpiriment()
-plt.show()
+samples=5000
+doExpiriment(sample_size=samples, dimension=2)
+doExpiriment(sample_size=samples, dimension=4)
+doExpiriment(sample_size=samples, dimension=8)
+doExpiriment(sample_size=samples, dimension=16)
+doExpiriment(sample_size=samples, dimension=32)
+doExpiriment(sample_size=samples, dimension=64)
