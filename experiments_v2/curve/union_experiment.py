@@ -105,8 +105,8 @@ def getGroundTruth(real_data, fake_data, scale_factors):
         fpr, fnr = llc.getScores(truth_labels, predictions)
         precision_class = value*fpr + fnr
         recall_class = precision_class / value
-        curve_class.append([precision_class, recall_class])
-        curve_distance.append([precision_hist, recall_hist])
+        curve_class.append([np.clip(precision_class,0,1), np.clip(recall_class,0,1)])
+        curve_distance.append([np.clip(precision_hist,0,1), np.clip(recall_hist,0,1)])
 
     return np.array(curve_class), np.array(curve_distance)
 
@@ -139,10 +139,12 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
         plt.savefig(path)
 
 # Plotting is reversed to get recall on x axis
-def plotKNNMetrics(pr_pairs, dc_pairs, k_values, save_path, save=True):
+def plotKNNMetrics(pr_pairs, dc_pairs, pr_under, dc_under, k_values, save_path, save=True):
     annotate_text = [f"k={k}" for k in k_values]
-    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="red", label=f"Precision_Recall_KNN")
-    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="yellow", label=f"Density_Coverage_KNN")
+    plt.scatter(pr_pairs[pr_under, 1], pr_pairs[pr_under, 0], c="red", label=f"Precision_Recall_KNN")
+    plt.scatter(pr_pairs[~pr_under, 1], pr_pairs[~pr_under, 0], c="green", label=f"Precision_Recall_KNN")
+    plt.scatter(dc_pairs[dc_under, 1], dc_pairs[dc_under, 0], c="yellow", label=f"Density_Coverage_KNN")
+    plt.scatter(dc_pairs[~dc_under, 1], dc_pairs[~dc_under, 0], c="black", label=f"Density_Coverage_KNN")
     for index, text in enumerate(annotate_text):
         pr_coords = (pr_pairs[index, 1], pr_pairs[index, 0])
         dc_coords = (dc_pairs[index, 1], dc_pairs[index, 0])
@@ -153,7 +155,6 @@ def plotKNNMetrics(pr_pairs, dc_pairs, k_values, save_path, save=True):
     if save:
         plt.savefig(save_path)
         plt.close()
-
 def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
     plt.scatter(histo_method[:, 1], histo_method[:, 0], c="green", label=f"Precision_Recall_Histo_Curve")
     plt.scatter(classifier_method[:, 1], classifier_method[:, 0], c="black", label=f"Precision_Recall_Class_Curve")
@@ -161,12 +162,25 @@ def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
     if save:
         path = f"C:/Users/lexme/Documents/gan_thesis_v2/plot_paper/gaussian/scale_{scale_factors}.png"
         plt.savefig(path)
-
 def getDistance(curve, metric_points):
-    distance_matrix = util.getDistanceMatrix(curve, metric_points)
-    smallest_distance = np.min(distance_matrix[:, 0])
+    points_under = []
+    for point in metric_points:
+        distances = point - curve
+        row_check = (distances <= 0).any(axis=1)
+        under_true = np.sum(row_check) == row_check.shape[0]
+        points_under.append(under_true)
 
-    return smallest_distance
+    return np.array(points_under)
+def plotStats(pr_under, dc_under, save_path, save=False):
+    pr_mean = pr_under.mean()
+    dc_mean = dc_under.mean()
+    ax = ["pr", "dc"]
+    plt.bar(ax, [pr_mean, dc_mean], color='black', width=0.25)
+    plt.ylim([0, 1.1])
+    plt.xlabel("Percentage points under curve")
+    if save:
+        plt.savefig(save_path)
+        plt.close()
 
 def doExpiriment(sample_size, dimension):
     pc_save_map = f"C:/Users/Lex/Documents/gan_thesis_v2/plot_paper/gaussian/" \
@@ -183,24 +197,25 @@ def doExpiriment(sample_size, dimension):
         real_data = distributions[0]
         fake_data = distributions[1]
         curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
-        k_vals = np.array([1, 2, 4, 8, 16, 32, sample_size - 1])
-        #k_vals = np.array([1, 3, 5, 7, 9])
-        k_vals = np.arange(1, sample_size, 5)
+
+        k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
+        #k_vals = np.arange(1, sample_size, 5)
 
         if knn_methods:
             pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
-            pr_distance = getDistance(curve_var_dist, pr_pairs)
-            dr_distance = getDistance(curve_var_dist, dc_pairs)
+            pr_under = getDistance(curve_var_dist, pr_pairs)
+            dc_under = getDistance(curve_var_dist, dc_pairs)
             #print(pr_distance, dr_distance)
-            if pr_distance < 0.1 or dr_distance < 0.1 or 1==1:
+            if 1==1:
                 plt.figure(figsize=(12, 10))
                 save_path = f"{pc_save_map}params_r{scale_factors[0]}_f{scale_factors[1]}.png"
-                plt.subplot(1, 2, 1)
-                plt.title(f"PR distance {pr_distance} and DR distance {dr_distance}")
+                plt.subplot(1, 3, 1)
                 plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-                plotKNNMetrics(pr_pairs, dc_pairs, k_vals, save_path, save=False)
-                plt.subplot(1, 2, 2)
-                plotting.plotDistributions(real_data, fake_data, "", save_path, save=True)
+                plotKNNMetrics(pr_pairs, dc_pairs, pr_under, dc_under, k_vals, save_path, save=False)
+                plt.subplot(1, 3, 2)
+                plotting.plotDistributions(real_data, fake_data, "", save_path, save=False)
+                plt.subplot(1, 3, 3)
+                plotStats(pr_under, dc_under, save_path, save=True)
 
         if curve_methods:
             pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
@@ -209,8 +224,5 @@ def doExpiriment(sample_size, dimension):
 
 samples=5000
 doExpiriment(sample_size=samples, dimension=2)
-doExpiriment(sample_size=samples, dimension=4)
-doExpiriment(sample_size=samples, dimension=8)
 doExpiriment(sample_size=samples, dimension=16)
-doExpiriment(sample_size=samples, dimension=32)
 doExpiriment(sample_size=samples, dimension=64)
