@@ -182,47 +182,79 @@ def plotStats(pr_under, dc_under, save_path, save=False):
         plt.savefig(save_path)
         plt.close()
 
-def doExpiriment(sample_size, dimension):
+def makeMap(sample_size, dimension, percentage, other_percentage):
+    split_val = [0.25, 0.5, 0.75, 1]
+    max_percentage = max(percentage, other_percentage)
+    begin = 0
+    end=0
+    for val in split_val:
+        if max_percentage <= val:
+            begin = val - 0.25
+            end = val
+            break
     pc_save_map = f"C:/Users/Lex/Documents/gan_thesis_v2/plot_paper/gaussian/" \
+                  f"{begin}-{end}/" \
                   f"s{sample_size}_d{dimension}/"
     if not os.path.isdir(pc_save_map):
         os.makedirs(pc_save_map)
+
+    return pc_save_map
+
+
+def doExpiriment(sample_size, dimension):
     var_factors = [0.01, 0.1, 0.2,  0.25, 0.5, 1]
     var_factors = [0.01, 0.1, 0.2, 0.25, 0.5, 0.75, 1]
     curve_methods = False
     knn_methods = True
+    row_values = []
+    save_plots=False
     for factor in var_factors:
-        scale_factors = [1, factor]
-        distributions = getDistributions(sample_size, dimension, scale_factors)
-        real_data = distributions[0]
-        fake_data = distributions[1]
-        curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
+        for other_factor in var_factors:
+            scale_factors = [factor, other_factor]
+            distributions = getDistributions(sample_size, dimension, scale_factors)
+            real_data = distributions[0]
+            fake_data = distributions[1]
+            curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
 
-        k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
-        #k_vals = np.arange(1, sample_size, 5)
+            k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
+            #k_vals = np.arange(1, sample_size, 5)
 
-        if knn_methods:
-            pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
-            pr_under = getDistance(curve_var_dist, pr_pairs)
-            dc_under = getDistance(curve_var_dist, dc_pairs)
-            #print(pr_distance, dr_distance)
-            if 1==1:
-                plt.figure(figsize=(12, 10))
-                save_path = f"{pc_save_map}params_r{scale_factors[0]}_f{scale_factors[1]}.png"
-                plt.subplot(1, 3, 1)
-                plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-                plotKNNMetrics(pr_pairs, dc_pairs, pr_under, dc_under, k_vals, save_path, save=False)
-                plt.subplot(1, 3, 2)
-                plotting.plotDistributions(real_data, fake_data, "", save_path, save=False)
-                plt.subplot(1, 3, 3)
-                plotStats(pr_under, dc_under, save_path, save=True)
+            if knn_methods:
+                pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
+                pr_under = getDistance(curve_var_dist, pr_pairs)
+                dc_under = getDistance(curve_var_dist, dc_pairs)
 
-        if curve_methods:
-            pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
-            plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
+                pc_save_map = makeMap(sample_size, dimension, pr_under.mean(), dc_under.mean())
+                values = [factor, other_factor, pr_under.mean(), dc_under.mean()]
+                row_values.append(values)
 
+                if save_plots:
+                    plt.figure(figsize=(12, 10))
+                    save_path = f"{pc_save_map}params_r{scale_factors[0]}_f{scale_factors[1]}.png"
+                    plt.subplot(1, 3, 1)
+                    plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
+                    plotKNNMetrics(pr_pairs, dc_pairs, pr_under, dc_under, k_vals, save_path, save=False)
+                    plt.subplot(1, 3, 2)
+                    plotting.plotDistributions(real_data, fake_data, "", save_path, save=False)
+                    plt.subplot(1, 3, 3)
+                    plotStats(pr_under, dc_under, save_path, save=True)
+                    plt.show()
 
-samples=5000
+            if curve_methods:
+                pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
+                plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
+
+    columns= ["real_lambda_factor", "fake_lambda_factor", "pr_under_mean", "dc_under_mean"]
+    result_dataframe = pd.DataFrame(data=row_values, columns=columns)
+    pr_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="pr_under_mean")
+    dc_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="dc_under_mean")
+    plotting.HeatMapPivot(pr_pivot, title_text=f"Precision and Recall, samples{sample_size}_dimension{dimension}",
+                          save=True, save_path=f"./pr_s{sample_size}_d{dimension}.png")
+    plotting.HeatMapPivot(dc_pivot, title_text=f"Density and Coverage, samples{sample_size}_dimension{dimension}",
+                          save=True, save_path=f"dc_s{sample_size}_d{dimension}.png")
+
+samples=1000
 doExpiriment(sample_size=samples, dimension=2)
 doExpiriment(sample_size=samples, dimension=16)
-doExpiriment(sample_size=samples, dimension=64)
+# doExpiriment(sample_size=samples, dimension=64)
+plt.show()
