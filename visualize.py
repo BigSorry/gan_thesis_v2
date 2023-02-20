@@ -233,7 +233,6 @@ def plotBars(score_dataframe, score_dataframe_extra, score_name):
 
 def plotDistributions(real_data, fake_data, title_text, save_path, save=False):
     plt.title(title_text)
-
     plt.scatter(real_data[:, 0], real_data[:, 1], c="green", alpha=0.75, label="Real data")
     plt.scatter(fake_data[:, 0], fake_data[:, 1], c="red", alpha=1, label="Fake data")
     plt.legend()
