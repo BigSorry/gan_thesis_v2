@@ -72,16 +72,16 @@ def getAnnotColors(annotations):
             pass
 
 def HeatMapPivot(pivot_table, title_text="", save=False, save_path=""):
-    plt.figure(figsize=(14, 6))
     plt.title(title_text)
     sns.heatmap(pivot_table, cmap="RdYlGn_r", annot=True,
                 annot_kws={"color": "black", "backgroundcolor": "white"}, vmin=0, vmax=1)
     plt.yticks(rotation=0)
 
     if save:
-        plt.subplots_adjust(wspace=0.3)
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.subplots_adjust(wspace=0.5, hspace=0.5)
+        plt.savefig(save_path, dpi=300)
         plt.close()
+
 def saveHeatMap(tabular_data, rows, columns, save=False, save_path="", title_text=""):
     plt.figure(figsize=(14, 6))
     sns.heatmap(tabular_data,
