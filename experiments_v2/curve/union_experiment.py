@@ -212,63 +212,43 @@ def makeMap(sample_size, dimension, percentage, other_percentage):
 
     return pc_save_map
 
-def plotHeatMaps(sample_size, dimension, dataframe):
-    pr_pivot = dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
-                                      values="pr_nearest_distances")
-    pr_pivot2 = dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="pr_under_mean")
-    dc_pivot = dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
-                                      values="dc_nearest_distances")
-    dc_pivot2 = dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="dc_under_mean")
-
+def plotHeatMaps(first_pivot, second_pivot, title_text, save_path):
     plt.figure(figsize=(14, 6))
     plt.subplot(2, 1, 1)
-    plotting.HeatMapPivot(pr_pivot, title_text=f"Precision and Recall, samples{sample_size}_dimension{dimension}, \n"
-                                               f"mean l1 distance between pr and nearest theoretical point",
-                          save=False, save_path=f"./images/pr_s{sample_size}_d{dimension}.png")
+    plotting.HeatMapPivot(first_pivot, title_text=f"{title_text} "
+                                                  f"mean l1 distance between pr and nearest theoretical point",
+                          save=False, save_path=save_path)
     plt.subplot(2, 1, 2)
-    plotting.HeatMapPivot(pr_pivot2, title_text=f"Precision and Recall, percentage points overestimation for pr",
-                          save=True, save_path=f"./images/pr_s{sample_size}_d{dimension}.png")
+    plotting.HeatMapPivot(second_pivot, title_text=f"{title_text}"
+                                                   f"percentage points overestimation",
+                          save=True, save_path=save_path)
 
-
-    plt.figure(figsize=(14, 6))
-    plt.subplot(2 ,1, 1)
-    plotting.HeatMapPivot(dc_pivot, title_text=f"Density and Coverage, samples{sample_size}_dimension{dimension},\n"
-                                               f"mean l1 distance between pr and nearest theoretical point,",
-                          save=False, save_path=f"./images/dc_s{sample_size}_d{dimension}.png")
-    plt.subplot(2, 1, 2)
-    plotting.HeatMapPivot(dc_pivot2, title_text=f"Density and Coverage, percentage points overestimation for dc",
-                           save=True, save_path=f"./images/dc_s{sample_size}_d{dimension}.png")
-
-def doExpiriment(sample_size, dimension): 
-    var_factors = [0.01, 0.1, 0.2,  0.25, 0.5, 1]
-    var_factors = [0.01, 0.1, 0.2, 0.25, 0.5, 0.75, 1]
+def doExperiment(sample_size, dimension, lambda_factors):
+    map_path = "C:/Users/lexme/Documents/gan_thesis_v2/images/"
     curve_methods = False
+    save_plots=False
     knn_methods = True
     row_values = []
-    save_plots=True
-    for factor in var_factors:
-        for other_factor in var_factors:
+    for factor in lambda_factors:
+        for other_factor in lambda_factors:
             scale_factors = [factor, other_factor]
             distributions = getDistributions(sample_size, dimension, scale_factors)
             real_data = distributions[0]
             fake_data = distributions[1]
             curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
-
             k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
-            #k_vals = np.arange(1, sample_size, 5)
 
             if knn_methods:
                 pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
                 pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
                 dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
 
-                pc_save_map = makeMap(sample_size, dimension, pr_above.mean(), dc_above.mean())
                 values = [factor, other_factor, pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
                 row_values.append(values)
 
                 if save_plots:
                     plt.figure(figsize=(12, 10))
-                    save_path = f"{pc_save_map}params_r{scale_factors[0]}_f{scale_factors[1]}.png"
+                    save_path = f"{map_path}/curve_images/params_r{scale_factors[0]}_f{scale_factors[1]}.png"
                     plt.subplot(1, 3, 1)
                     plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
                     plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
@@ -284,22 +264,21 @@ def doExpiriment(sample_size, dimension):
     columns= ["real_lambda_factor", "fake_lambda_factor", "pr_under_mean", "dc_under_mean",
               "pr_nearest_distances", "dc_nearest_distances"]
     result_dataframe = pd.DataFrame(data=row_values, columns=columns)
-    plotHeatMaps(sample_size, dimension, result_dataframe)
 
 
+    # Precision and Recall heatmaps
+    pr_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
+                                      values="pr_nearest_distances")
+    pr_pivot2 = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="pr_under_mean")
+    title_text = f"Precision and Recall, samples{sample_size}_dimension{dimension}, \n"
+    save_path = f"{map_path}pr_s{sample_size}_d{dimension}_lambda{lambda_factors}.png"
+    plotHeatMaps(pr_pivot, pr_pivot2, title_text, save_path)
 
-samples=1000
-doExpiriment(sample_size=samples, dimension=2)
-# doExpiriment(sample_size=samples, dimension=16)
-# doExpiriment(sample_size=samples, dimension=64)
-#
-# samples=3000
-# doExpiriment(sample_size=samples, dimension=2)
-# doExpiriment(sample_size=samples, dimension=16)
-# doExpiriment(sample_size=samples, dimension=64)
-#
-# samples=5000
-# doExpiriment(sample_size=samples, dimension=2)
-# doExpiriment(sample_size=samples, dimension=16)
-# doExpiriment(sample_size=samples, dimension=64)
-# plt.show()
+    # Density and Coverage heatmaps
+    dc_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
+                                      values="dc_nearest_distances")
+    dc_pivot2 = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="dc_under_mean")
+    title_text = f"Density and Coverage, samples{sample_size}_dimension{dimension}, \n"
+    save_path = f"{map_path}dc_s{sample_size}_d{dimension}_lambda{lambda_factors}.png"
+    plotHeatMaps(dc_pivot,dc_pivot2, title_text, save_path)
+
