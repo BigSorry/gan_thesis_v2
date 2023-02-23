@@ -11,15 +11,6 @@ import experiments_v2.helper_functions as util
 import metrics.not_used.metrics as mtr
 from sklearn.neighbors import KNeighborsClassifier
 
-def getDistributions(sample_size, dimension, scale_param):
-    distributions = []
-    mean_vec = np.zeros(dimension)
-    for scale in scale_param:
-        cov_mat = np.eye(dimension)*scale
-        samples = np.random.multivariate_normal(mean_vec, cov_mat, sample_size)
-        distributions.append(samples)
-    return distributions
-
 def doKNNS(mixture_dict, test_data, k_vals, label_value):
     test_labels = np.array([label_value for i in range(test_data.shape[0])])
     error_rates = {}
@@ -191,94 +182,44 @@ def plotStats(pr_above, dc_above, save_path, save=False):
         plt.savefig(save_path)
         plt.close()
 
-def makeMap(sample_size, dimension, percentage, other_percentage):
-    split_val = [0.25, 0.5, 0.75, 1]
-    max_percentage = max(percentage, other_percentage)
-    begin = 0
-    end=0
-    for val in split_val:
-        if max_percentage <= val:
-            begin = val - 0.25
-            end = val
-            break
-    pc_save_map = f"C:/Users/Lex/Documents/gan_thesis_v2/plot_paper/gaussian/" \
-                  f"{begin}-{end}/" \
-                  f"s{sample_size}_d{dimension}/"
-    pc_save_map = f"C:/Users/lexme/Documents/gan_thesis_v2/plot_paper/gaussian/" \
-                  f"{begin}-{end}/" \
-                  f"s{sample_size}_d{dimension}/"
-    if not os.path.isdir(pc_save_map):
-        os.makedirs(pc_save_map)
+def getDistributions(sample_size, dimension, lambda_factors):
+    mean_vec = np.zeros(dimension)
+    identity_cov =  np.eye(dimension)
+    reference_distribution = np.random.multivariate_normal(mean_vec, identity_cov, sample_size)
+    scaled_distributions = []
+    for scale in lambda_factors:
+        cov_mat = identity_cov*scale
+        samples = np.random.multivariate_normal(mean_vec, cov_mat, sample_size)
+        scaled_distributions.append(samples)
 
-    return pc_save_map
+    return reference_distribution, scaled_distributions
 
-def plotHeatMaps(first_pivot, second_pivot, title_text, save_path):
-    plt.figure(figsize=(14, 6))
-    plt.subplot(2, 1, 1)
-    plotting.HeatMapPivot(first_pivot, title_text=f"{title_text} "
-                                                  f"mean l1 distance between pr and nearest theoretical point",
-                          save=False, save_path=save_path)
-    plt.subplot(2, 1, 2)
-    plotting.HeatMapPivot(second_pivot, title_text=f"{title_text}"
-                                                   f"percentage points overestimation",
-                          save=True, save_path=save_path)
-
-def doExperiment(sample_size, dimension, lambda_factors):
-    map_path = "C:/Users/lexme/Documents/gan_thesis_v2/images/"
+def doExperiment(distribution, other_distribution, real_factor, other_factor, k_vals, save_curve=False, map_path=""):
     curve_methods = False
-    save_plots=False
-    knn_methods = True
-    row_values = []
-    for factor in lambda_factors:
-        for other_factor in lambda_factors:
-            scale_factors = [factor, other_factor]
-            distributions = getDistributions(sample_size, dimension, scale_factors)
-            real_data = distributions[0]
-            fake_data = distributions[1]
-            curve_classifier, curve_var_dist = getGroundTruth(real_data, fake_data, scale_factors)
-            k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
+    pr_pairs, dc_pairs = showKNN(distribution, other_distribution, k_vals)
+    scale_factors = [real_factor, other_factor]
+    curve_classifier, curve_var_dist = getGroundTruth(distribution, other_distribution, scale_factors)
+    pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
+    dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
+    stat_values = [pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
 
-            if knn_methods:
-                pr_pairs, dc_pairs = showKNN(real_data, fake_data, k_vals)
-                pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
-                dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
+    # if curve_methods:
+    #     pr_curve_histo, pr_curve_class = getCurves(distribution, other_distribution)
+    #     plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
 
-                values = [factor, other_factor, pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
-                row_values.append(values)
+    if save_curve:
+        plt.figure(figsize=(12, 10))
+        save_path = f"{map_path}/curve_images/params_r{scale_factors[0]}_f{real_factor[1]}.png"
+        plt.subplot(1, 3, 1)
+        plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
+        plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
+        plt.subplot(1, 3, 2)
+        plotting.plotDistributions(distribution, other_distribution, "", save_path, save=False)
+        plt.subplot(1, 3, 3)
+        plotStats(pr_above, dc_above, save_path, save=save_curve)
 
-                if save_plots:
-                    plt.figure(figsize=(12, 10))
-                    save_path = f"{map_path}/curve_images/params_r{scale_factors[0]}_f{scale_factors[1]}.png"
-                    plt.subplot(1, 3, 1)
-                    plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-                    plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
-                    plt.subplot(1, 3, 2)
-                    plotting.plotDistributions(real_data, fake_data, "", save_path, save=False)
-                    plt.subplot(1, 3, 3)
-                    plotStats(pr_above, dc_above, save_path, save=save_plots)
-
-            if curve_methods:
-                pr_curve_histo, pr_curve_class = getCurves(real_data, fake_data)
-                plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
-
-    columns= ["real_lambda_factor", "fake_lambda_factor", "pr_under_mean", "dc_under_mean",
-              "pr_nearest_distances", "dc_nearest_distances"]
-    result_dataframe = pd.DataFrame(data=row_values, columns=columns)
+    return stat_values
 
 
-    # Precision and Recall heatmaps
-    pr_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
-                                      values="pr_nearest_distances")
-    pr_pivot2 = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="pr_under_mean")
-    title_text = f"Precision and Recall, samples{sample_size}_dimension{dimension}, \n"
-    save_path = f"{map_path}pr_s{sample_size}_d{dimension}_lambda{lambda_factors}.png"
-    plotHeatMaps(pr_pivot, pr_pivot2, title_text, save_path)
 
-    # Density and Coverage heatmaps
-    dc_pivot = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor",
-                                      values="dc_nearest_distances")
-    dc_pivot2 = result_dataframe.pivot(index="real_lambda_factor", columns="fake_lambda_factor", values="dc_under_mean")
-    title_text = f"Density and Coverage, samples{sample_size}_dimension{dimension}, \n"
-    save_path = f"{map_path}dc_s{sample_size}_d{dimension}_lambda{lambda_factors}.png"
-    plotHeatMaps(dc_pivot,dc_pivot2, title_text, save_path)
 
