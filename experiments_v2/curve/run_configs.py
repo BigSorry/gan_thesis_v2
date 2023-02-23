@@ -42,15 +42,14 @@ def checkScaling():
         var_factors *= 10
 
 def runExperiment():
-    map_path = "C:/Users/lexme/Documents/gan_thesis_v2/images/"
     headers = ["dimension", "lambda_factor", "pr_under_mean", "dc_under_mean",
                "pr_nearest_distances", "dc_nearest_distances", "real_scaling"]
-    row_values = []
     sample_sizes = [1000, 3000, 5000]
     #sample_sizes = [1000]
     dimensions = [2, 8, 16, 32, 64]
     lambda_factors = np.array([0.01, 0.25, 0.5, 0.75, 1])
     for sample_size in sample_sizes:
+        row_values = []
         k_vals = np.array([1, 2, 3, 4, 8, 9, 16, 32, 64, sample_size - 1])
         for dimension in dimensions:
             reference_distribution, scaled_distributions = exp.getDistributions(sample_size, dimension, lambda_factors)
@@ -69,9 +68,12 @@ def runExperiment():
 
         dataframe = pd.DataFrame(data=row_values, columns=headers)
         real_scaled = dataframe.loc[dataframe["real_scaling"] == True, :]
-        fake_scaled_scaled = dataframe.loc[dataframe["real_scaling"] == True, :]
-        plotHeatMaps(real_scaled, map_path, sample_size)
-        plotHeatMaps(fake_scaled_scaled, map_path, sample_size)
+        fake_scaled_scaled = dataframe.loc[dataframe["real_scaling"] == False, :]
+        fake_map_path = "C:/Users/lexme/Documents/gan_thesis_v2/images/fake_scaled/"
+        real_map_path = "C:/Users/lexme/Documents/gan_thesis_v2/images/real_scaled/"
+
+        plotHeatMaps(real_scaled, fake_map_path, sample_size)
+        plotHeatMaps(fake_scaled_scaled, real_map_path, sample_size)
 
 
 runExperiment()
