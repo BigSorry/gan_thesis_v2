@@ -12,8 +12,9 @@ def multiGaus(real_data, fake_data, scale_params):
     densities_real = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_real)
     densities_fake = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_fake)
 
-
     return densities_real, densities_fake
+def multiUniform(real_data, fake_data, scale_params):
+    width = np.abs(scale_params[1] - scale_params[0])
 
 def getDensities(real_data, fake_data, distribution_parameters, method_name="multi_gaus"):
     if method_name == "multi_gaus":

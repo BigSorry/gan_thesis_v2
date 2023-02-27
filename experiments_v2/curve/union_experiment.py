@@ -74,12 +74,6 @@ def doPlotting(error_dict):
 
 
     ax2.set_ylabel("FNR")
-
-def plotCurve(curve_classifier, curve_var_dist):
-    plotting.plotCurve(curve_classifier, label_text="Likelihood ratio test")
-    plotting.plotCurve(curve_var_dist, label_text="Variational distance")
-    plt.legend()
-
 def getGroundTruth(real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
     densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name="multi_gaus")
@@ -124,7 +118,9 @@ def getCurves(real_data, fake_data):
 
 def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=True):
     plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
-    plotCurve(curve_classifier, curve_var_dist)
+    plotting.plotCurve(curve_classifier, label_text="Likelihood ratio test")
+    plotting.plotCurve(curve_var_dist, label_text="Variational distance")
+    plt.legend()
     if save:
         path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/ground-truths/scale_{scale_factors}.png"
         plt.savefig(path)
@@ -184,7 +180,7 @@ def plotStats(pr_above, dc_above, save_path, save=False):
 
 def getDistributions(sample_size, dimension, lambda_factors):
     mean_vec = np.zeros(dimension)
-    identity_cov =  np.eye(dimension)
+    identity_cov = np.eye(dimension)
     reference_distribution = np.random.multivariate_normal(mean_vec, identity_cov, sample_size)
     scaled_distributions = []
     for scale in lambda_factors:
@@ -203,10 +199,6 @@ def doExperiment(distribution, other_distribution, real_factor, other_factor, k_
     dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
     stat_values = [pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
 
-    # if curve_methods:
-    #     pr_curve_histo, pr_curve_class = getCurves(distribution, other_distribution)
-    #     plotCurveMetrics(pr_curve_histo, pr_curve_class, scale_factors, save=False)
-
     if save_curve:
         plt.figure(figsize=(12, 10))
         save_path = f"{map_path}/curve_images/params_r{scale_factors[0]}_f{real_factor[1]}.png"
@@ -218,7 +210,7 @@ def doExperiment(distribution, other_distribution, real_factor, other_factor, k_
         plt.subplot(1, 3, 3)
         plotStats(pr_above, dc_above, save_path, save=save_curve)
 
-    return stat_values
+    return pr_above, dc_above, pr_nearest_distances, dc_nearest_distances
 
 
 
