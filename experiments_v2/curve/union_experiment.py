@@ -64,19 +64,17 @@ def doPlotting(error_dict):
         ax2.boxplot(fnr, positions=[i])
         i+=2
 
-
     ax1.set_ylabel("FPR")
     string_labels = [f"p={p}" for p in ber_ps]
     plt.xticks(x_axes, string_labels)
     ax1.set_xticks(x_axes)
     ax1.set_xticklabels(string_labels)
     ax1.set_xlim(0, np.max(x_axes)+2)
-
-
     ax2.set_ylabel("FNR")
-def getGroundTruth(real_data, fake_data, scale_factors):
+
+def getGroundTruth(distribution_name, real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
-    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name="multi_gaus")
+    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name=distribution_name)
     densities_real_norm = densities_real / np.sum(densities_real)
     densities_fake_norm = densities_fake / np.sum(densities_fake)
 
@@ -117,7 +115,7 @@ def getCurves(real_data, fake_data):
     return [curve, curve2]
 
 def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=True):
-    plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
+    #plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
     plotting.plotCurve(curve_classifier, label_text="Likelihood ratio test")
     plotting.plotCurve(curve_var_dist, label_text="Variational distance")
     plt.legend()
@@ -128,17 +126,17 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
 # Plotting is reversed to get recall on x axis
 def plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_values, save_path, save=True):
     annotate_text = [f"k={k}" for k in k_values]
-    plt.scatter(pr_pairs[~pr_above, 1], pr_pairs[~pr_above, 0], c="red", label=f"Under_Precision_Recall_KNN")
-    plt.scatter(pr_pairs[pr_above, 1], pr_pairs[pr_above, 0], c="green", label=f"Upper_Precision_Recall_KNN")
-    plt.scatter(dc_pairs[~dc_above, 1], dc_pairs[~dc_above, 0], c="yellow", label=f"Under_Density_Coverage_KNN")
-    plt.scatter(dc_pairs[dc_above, 1], dc_pairs[dc_above, 0], c="black", label=f"Upper_Density_Coverage_KNN")
+    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="yellow", label=f"Precision_Recall_KNN")
+    #plt.scatter(pr_pairs[pr_above, 1], pr_pairs[pr_above, 0], c="green", label=f"Upper_Precision_Recall_KNN")
+    #plt.scatter(dc_pairs[~dc_above, 1], dc_pairs[~dc_above, 0], c="yellow", label=f"Under_Density_Coverage_KNN")
+    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="black", label=f"Density_Coverage_KNN")
     for index, text in enumerate(annotate_text):
         pr_coords = (pr_pairs[index, 1], pr_pairs[index, 0])
         dc_coords = (dc_pairs[index, 1], dc_pairs[index, 0])
-        plotting.specialAnnotate(text, pr_coords)
-        plotting.specialAnnotate(text, dc_coords)
-    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
-               fancybox=True, shadow=True, ncol=2)
+        plotting.specialAnnotate(text, pr_coords, fontsize=14)
+        plotting.specialAnnotate(text, dc_coords, fontsize=14)
+    plt.legend(loc='upper center', bbox_to_anchor=(1, 1.15),
+               fancybox=True, shadow=True, ncol=2, fontsize=9)
     if save:
         plt.savefig(save_path)
         plt.close()
@@ -178,37 +176,51 @@ def plotStats(pr_above, dc_above, save_path, save=False):
         plt.savefig(save_path)
         plt.close()
 
-def getDistributions(sample_size, dimension, lambda_factors):
+def getDistributions(distribution_name, sample_size, dimension, lambda_factors):
     mean_vec = np.zeros(dimension)
     identity_cov = np.eye(dimension)
     reference_distribution = np.random.multivariate_normal(mean_vec, identity_cov, sample_size)
+    if distribution_name == "exponential":
+        reference_distribution = np.random.exponential(1, size=(sample_size, dimension))
     scaled_distributions = []
     for scale in lambda_factors:
         cov_mat = identity_cov*scale
         samples = np.random.multivariate_normal(mean_vec, cov_mat, sample_size)
+        if distribution_name == "exponential":
+            samples = np.random.exponential(scale, size=(sample_size, dimension))
         scaled_distributions.append(samples)
 
     return reference_distribution, scaled_distributions
 
-def doExperiment(distribution, other_distribution, real_factor, other_factor, k_vals, save_curve=False, map_path=""):
+def doExperiment(distribution_name, distribution, other_distribution, real_factor, other_factor, k_vals, save_curve=False, map_path=""):
     curve_methods = False
     pr_pairs, dc_pairs = showKNN(distribution, other_distribution, k_vals)
     scale_factors = [real_factor, other_factor]
-    curve_classifier, curve_var_dist = getGroundTruth(distribution, other_distribution, scale_factors)
+    curve_classifier, curve_var_dist = getGroundTruth(distribution_name, distribution, other_distribution, scale_factors)
     pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
     dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
     stat_values = [pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
 
     if save_curve:
-        plt.figure(figsize=(12, 10))
-        save_path = f"{map_path}/curve_images/params_r{scale_factors[0]}_f{real_factor[1]}.png"
-        plt.subplot(1, 3, 1)
-        plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-        plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
-        plt.subplot(1, 3, 2)
-        plotting.plotDistributions(distribution, other_distribution, "", save_path, save=False)
-        plt.subplot(1, 3, 3)
-        plotStats(pr_above, dc_above, save_path, save=save_curve)
+        plt.figure()
+        dimension = distribution.shape[1]
+        sample_size = distribution.shape[0]
+        dimension_map = f"{map_path}/curve/s={sample_size}_d={dimension}/"
+        if not os.path.exists(dimension_map):
+            os.makedirs(dimension_map)
+        save_path = f"{dimension_map}/params_r{real_factor}_f{other_factor}.png"
+        if dimension == 2:
+            plt.subplot(1, 2, 1)
+            plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
+            plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
+            plt.subplot(1, 2, 2)
+            plotting.plotDistributions(distribution, other_distribution, "", save_path, save=True)
+        else:
+            plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
+            plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=True)
+
+        # plt.subplot(1, 3, 3)
+        # plotStats(pr_above, dc_above, save_path, save=save_curve)
 
     return pr_above, dc_above, pr_nearest_distances, dc_nearest_distances
 
