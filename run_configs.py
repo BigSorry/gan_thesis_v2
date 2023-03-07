@@ -78,9 +78,9 @@ def main():
     lambda_factors = np.array([0.1, 1, 10])
     distribution_name = "gaussian"
     #distribution_name = "exponential"
-    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
+    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
     runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=False, map_path=fake_scaled)
-    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/images/{distribution_name}/real_scaled/"
+    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
     runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
     
 
