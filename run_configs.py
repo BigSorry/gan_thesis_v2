@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from experiments import gaussian_experiment as exp
+from experiments import create_experiment as exp
+from experiments import  distributions as dist
 import matplotlib.pyplot as plt
 import visualize as plotting
 
@@ -38,7 +39,7 @@ def runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, r
         row_values = []
         k_vals = np.array([1, 3, 7, 9, 16, 32, 64, sample_size - 1])
         for dimension in dimensions:
-            reference_distribution, scaled_distributions = exp.getDistributions(distribution_name, sample_size, dimension, lambda_factors)
+            reference_distribution, scaled_distributions = dist.getDensities(sample_size, dimension, lambda_factors, distribution_name="gaussian")
             for index, scaled_distribution in enumerate(scaled_distributions):
                 constant_factor = 1
                 scale_factor = lambda_factors[index]
@@ -77,9 +78,9 @@ def main():
     lambda_factors = np.array([0.1, 1, 10])
     distribution_name = "gaussian"
     #distribution_name = "exponential"
-    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
+    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
     runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=False, map_path=fake_scaled)
-    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
+    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/images/{distribution_name}/real_scaled/"
     runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
     
 
