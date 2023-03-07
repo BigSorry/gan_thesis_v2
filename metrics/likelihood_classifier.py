@@ -1,4 +1,3 @@
-from data import gaus_problem as problem
 import numpy as np
 import visualize as plotting
 from scipy.stats import multivariate_normal

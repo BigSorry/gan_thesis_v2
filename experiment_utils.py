@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import scipy.spatial.distance
 import torchvision.transforms as transforms
 from PIL import Image
-from models.inceptionv3 import *
 from torchvision import datasets
 import torchvision.models as models
 

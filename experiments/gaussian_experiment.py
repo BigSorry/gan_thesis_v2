@@ -1,13 +1,10 @@
 import os
 import numpy as np
-import pandas as pd
-import experiments_v2.helper_functions as util
 import matplotlib.pyplot as plt
 import metrics.likelihood_classifier as llc
-from sklearn.metrics import pairwise_distances
-import experiments_v2.curve.likelihood_estimations as ll_est
+import experiments.likelihood_estimations as ll_est
 import visualize as plotting
-import experiments_v2.helper_functions as util
+import helper_functions as util
 import metrics.not_used.metrics as mtr
 from sklearn.neighbors import KNeighborsClassifier
 

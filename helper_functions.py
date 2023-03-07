@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualize as plotting
 from sklearn.metrics import pairwise_distances
-import experiments_v2.fake_diverse as experiment_diverse
 
 def getParams(sample_size):
     k_values = []

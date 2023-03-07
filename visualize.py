@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
-import experiments_v2.helper_functions as helper
+import helper_functions as helper
 import seaborn as sns
 
 def plotScores(result_dict):

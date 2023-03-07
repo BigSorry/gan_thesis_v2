@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import union_experiment as exp
+from experiments import gaussian_experiment as exp
 import matplotlib.pyplot as plt
 import visualize as plotting
 
