@@ -2,13 +2,12 @@ import numpy as np
 from scipy.linalg import sqrtm
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
-import experiment_utils as util
+import helper_functions as util
 import metrics.improved_precision_recall as ipr
 import metrics.not_used.precision_recall_histogram as prh
 import metrics.not_used.precision_recall_classifier as prc
 import metrics.likelihood_classifier as llc
 import metrics.diversity_coverage as dc
-import metrics.improved_precision_recall as ipr
 
 # TODO Refactoring with Metric objects
 def getPRCurve(real_features, fake_features, method_name, params):

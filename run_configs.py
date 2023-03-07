@@ -39,9 +39,9 @@ def runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, r
         row_values = []
         k_vals = np.array([1, 3, 7, 9, 16, 32, 64, sample_size - 1])
         for dimension in dimensions:
-            reference_distribution, scaled_distributions = dist.getDensities(sample_size, dimension, lambda_factors, distribution_name="gaussian")
+            reference_distribution, scaled_distributions = dist.getDensities(sample_size, dimension, lambda_factors, distribution_name=distribution_name)
             for index, scaled_distribution in enumerate(scaled_distributions):
-                constant_factor = 1
+                constant_factor = lambda_factors[0]
                 scale_factor = lambda_factors[index]
                 # Real distribution first argument
                 if real_scaling:
@@ -62,11 +62,33 @@ def runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, r
                     row = [dimension, scale_factor, k_value, pr_above, pr_near, dc_above, dc_near]
                     row_values.append(row)
 
-
-
         dataframe = pd.DataFrame(data=row_values, columns=headers)
         grouped_data = dataframe.groupby(["dimension", "lambda_factor"]).mean().reset_index()
         plotHeatMaps(grouped_data, map_path, sample_size)
+
+def runGaussian(sample_sizes, dimensions):
+    lambda_factors = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
+    distribution_name = "gaussian"
+    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
+    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=False, map_path=fake_scaled)
+    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
+    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
+def runExponential(sample_sizes, dimensions):
+    lambda_factors = np.array([0.1, 0.5, 1, 2, 4])
+    distribution_name = "exponential"
+    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
+    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=False, map_path=fake_scaled)
+    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
+    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
+
+def runGaussianSame():
+    sample_sizes = [10000]
+    dimensions = [2, 8, 16, 32, 64, 512, 1024]
+    dimensions = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    lambda_factors = np.array([1])
+    distribution_name = "gaussian"
+    fake_scaled = f"./gaussian_equal/"
+    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=fake_scaled)
 
 def main():
     # Setup experiment parameters
@@ -74,14 +96,10 @@ def main():
     sample_sizes = [1000]
     dimensions = [2, 8, 16, 32, 64]
     dimensions = [2]
-    lambda_factors = np.array([0.01, 0.1, 0.25, 0.5, 0.75, 1])
-    lambda_factors = np.array([0.1, 1, 10])
-    distribution_name = "gaussian"
-    #distribution_name = "exponential"
-    fake_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/fake_scaled/"
-    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=False, map_path=fake_scaled)
-    real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
-    runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
-    
+
+    runGaussianSame()
+    #runGaussian(sample_sizes, dimensions)
+    #runExponential(sample_sizes, dimensions)
+
 
 main()

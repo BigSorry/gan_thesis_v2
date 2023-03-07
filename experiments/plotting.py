@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=True):
     #plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
-    plotCurve(curve_classifier, label_text="Likelihood ratio test")
+    #plotCurve(curve_classifier, label_text="Likelihood ratio test")
     plotCurve(curve_var_dist, label_text="Variational distance")
     plt.legend()
     if save:

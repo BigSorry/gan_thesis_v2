@@ -10,9 +10,10 @@ from sklearn.neighbors import KNeighborsClassifier
 
 def getGroundTruth(distribution_name, real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
+    epsilon = 10e-16
     densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name=distribution_name)
-    densities_real_norm = densities_real / np.sum(densities_real)
-    densities_fake_norm = densities_fake / np.sum(densities_fake)
+    densities_real_norm = densities_real / (np.sum(densities_real) + epsilon)
+    densities_fake_norm = densities_fake / (np.sum(densities_fake) + epsilon)
 
     curve_class = []
     curve_distance = []
@@ -42,6 +43,7 @@ def getKNN(real_data, fake_data, k_vals):
 
     return [pr_pairs, dc_pairs]
 
+## Not used atm
 def getCurves(real_data, fake_data):
     params = {"k_cluster": 20, "angles": 1001, "kmeans_runs": 2}
     pr_score, curve, cluster_labels = mtr.getHistoPR(real_data, fake_data, params)
@@ -76,7 +78,6 @@ def doExperiment(distribution_name, distribution, other_distribution, real_facto
     curve_classifier, curve_var_dist = getGroundTruth(distribution_name, distribution, other_distribution, scale_factors)
     pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
     dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
-    stat_values = [pr_above.mean(), dc_above.mean(), pr_nearest_distances.mean(), dc_nearest_distances.mean()]
 
     if save_curve:
         plt.figure()

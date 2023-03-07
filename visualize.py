@@ -80,7 +80,7 @@ def HeatMapPivot(pivot_table, title_text="", save=False, save_path=""):
     ax.invert_yaxis()
     if save:
         plt.subplots_adjust(wspace=0.5, hspace=0.5)
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
 
 def saveHeatMap(tabular_data, rows, columns, save=False, save_path="", title_text=""):

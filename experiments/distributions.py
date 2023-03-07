@@ -13,7 +13,6 @@ def getGaussian(sample_size, dimension, lambda_factors):
 
     return reference_distribution, scaled_distributions
 
-
 # Assume real and fake prior is equal
 def getExponential(sample_size, dimension, lambda_factors):
     reference_distribution = np.random.exponential(1 / lambda_factors[0], size=(sample_size, dimension))

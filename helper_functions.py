@@ -4,6 +4,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualize as plotting
 from sklearn.metrics import pairwise_distances
+def getLambdas(angle_count, epsilon= 1e-10):
+    epsilon = 1e-10
+    angles = np.linspace(epsilon, np.pi / 2 - epsilon, num=angle_count)
+    lambdas = np.tan(angles)
+
+    return lambdas
+# Rows are real samples and columns are generated samples
+def createTrainTest(real_features, fake_features):
+    all_combined = np.concatenate((real_features, fake_features))
+    all_labels = np.concatenate((np.ones(real_features.shape[0]),
+                                 np.zeros(fake_features.shape[0])))
+    label_vec = np.random.randint(2, size=all_combined.shape[0])
+    mixture = all_combined[label_vec == 1, :]
+    mixture_labels = all_labels[label_vec == 1]
+    test_data = all_combined[label_vec == 0, :]
+    test_labels = all_labels[label_vec == 0]
+
+
+    return mixture, mixture_labels, test_data, test_labels
+
 
 def getParams(sample_size):
     k_values = []
