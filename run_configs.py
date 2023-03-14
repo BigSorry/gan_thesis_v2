@@ -32,12 +32,25 @@ def plotHeatMaps(dataframe, map_path, sample_size):
     plotting.HeatMapPivot(dc_second_pivot, title_text=f"percentage points overestimation",
                           save=True, save_path=dc_save_path)
 
+def plotLines(dataframe, map_path, sample_size):
+    pr_first_pivot = dataframe.pivot(index="k_val", columns="dimension", values="pr_nearest_distance")
+    dc_first_pivot = dataframe.pivot(index="k_val", columns="dimension", values="dc_nearest_distance")
+    # Precision and Recall
+    pr_save_path = f"{map_path}pr_s{sample_size}.png"
+    plt.figure(figsize=(14, 6))
+    plotting.HeatMapPivot(pr_first_pivot, title_text=f"Precision and Recall with samples {sample_size}",save=True, save_path=pr_save_path)
+    # Density and Coverage
+    dc_save_path = f"{map_path}dc_s{sample_size}.png"
+    plt.figure(figsize=(14, 6))
+    plotting.HeatMapPivot(dc_first_pivot, title_text=f"Density and Coverage with samples {sample_size}", save=True, save_path=dc_save_path)
+
 def runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling, map_path):
     headers = ["dimension", "lambda_factor", "k_val", "pr_above_mean",
                "pr_nearest_distance", "dc_above_mean", "dc_nearest_distance"]
     for sample_size in sample_sizes:
         row_values = []
         k_vals = np.array([1, 3, 7, 9, 16, 32, 64, sample_size - 1])
+        k_vals = np.array([1, 9, 32, 64, sample_size - 1])
         for dimension in dimensions:
             reference_distribution, scaled_distributions = dist.getDensities(sample_size, dimension, lambda_factors, distribution_name=distribution_name)
             for index, scaled_distribution in enumerate(scaled_distributions):
@@ -64,7 +77,9 @@ def runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, r
 
         dataframe = pd.DataFrame(data=row_values, columns=headers)
         grouped_data = dataframe.groupby(["dimension", "lambda_factor"]).mean().reset_index()
-        plotHeatMaps(grouped_data, map_path, sample_size)
+        #plotHeatMaps(grouped_data, map_path, sample_size)
+        grouped_data = dataframe.groupby(["dimension", "k_val"]).mean().reset_index()
+        plotLines(grouped_data, map_path, sample_size)
 
 def runGaussian(sample_sizes, dimensions):
     lambda_factors = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
@@ -81,10 +96,11 @@ def runExponential(sample_sizes, dimensions):
     real_scaled = f"C:/Users/lexme/Documents/gan_thesis_v2/images/{distribution_name}/real_scaled/"
     runExperiment(distribution_name, sample_sizes, dimensions, lambda_factors, real_scaling=True, map_path=real_scaled)
 
-def runGaussianSame():
-    sample_sizes = [10000]
+def runGaussianEqual():
+    sample_sizes = [5000]
     dimensions = [2, 8, 16, 32, 64, 512, 1024]
     dimensions = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    dimensions = [2, 8, 16, 32, 64, 512, 1024]
     lambda_factors = np.array([1])
     distribution_name = "gaussian"
     fake_scaled = f"./gaussian_equal/"
@@ -97,7 +113,7 @@ def main():
     dimensions = [2, 8, 16, 32, 64]
     dimensions = [2]
 
-    runGaussianSame()
+    runGaussianEqual()
     #runGaussian(sample_sizes, dimensions)
     #runExponential(sample_sizes, dimensions)
 

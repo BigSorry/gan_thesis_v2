@@ -71,6 +71,12 @@ def getAnnotColors(annotations):
         for j in range(annotations.shape[1]):
             pass
 
+
+def heatmap2d(arr: np.ndarray):
+    plt.imshow(arr, cmap='viridis')
+    plt.colorbar()
+    plt.show()
+
 def HeatMapPivot(pivot_table, title_text="", save=False, save_path=""):
     plt.title(title_text)
     ax = sns.heatmap(pivot_table, cmap="RdYlGn_r", annot=True,

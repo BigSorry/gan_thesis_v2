@@ -1,4 +1,17 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+def HeatMapPivot(pivot_table, title_text="", save=False, save_path=""):
+    plt.title(title_text)
+    ax = sns.heatmap(pivot_table, cmap="RdYlGn_r", annot=True,
+                annot_kws={"color": "black", "backgroundcolor": "white"},
+                     vmin=0, vmax=1)
+    plt.yticks(rotation=0)
+    ax.invert_yaxis()
+    if save:
+        plt.subplots_adjust(wspace=0.5, hspace=0.5)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
 def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=True):
     #plt.title(f"Lambda scaling real cov {scale_factors[0]} and lambda scaling fake cov {scale_factors[1]}")
@@ -54,6 +67,32 @@ def plotDistributions(real_data, fake_data, title_text, save_path, save=False):
     if save:
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
+
+def plotBars(k_vals, score_pairs, first_name, second_name):
+   first_score = score_pairs[:, 0]
+   second_score = score_pairs[:, 1]
+   x_vals = ((np.arange(first_score.shape[0]) + 1)*3)
+   width = 1
+   plt.ylim([0, 1.1])
+   plt.xticks(x_vals, k_vals)
+   plt.xlabel("k-value")
+   bars = plt.bar(x_vals, first_score, -width, align="edge", label=f"{first_name}", color="black")
+   bars2 = plt.bar(x_vals, second_score, width, align="edge", label=f"{second_name}", color="grey")
+   # textBar(bars)
+   # textBar(bars2)
+   plt.legend()
+
+def textBar(bars):
+    for bar in bars:
+        plt.annotate(f'{bar.get_height()}',
+                     (bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01),
+                     verticalalignment='bottom', horizontalalignment='center',
+                     fontsize=9)
+
+def plotLine(x, y, label_text=""):
+    plt.ylim([0,1.1])
+    plt.xlabel("k-value")
+    plt.plot(x, y, label=label_text)
 
 def plotCurve(curve, label_text):
     # plt.title(title_text)
