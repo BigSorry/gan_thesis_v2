@@ -32,8 +32,8 @@ def getGroundTruth(distribution_name, real_data, fake_data, scale_factors):
 
 def getKNN(real_data, fake_data, k_vals):
     distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(real_data, fake_data)
-    pr_pairs = np.zeros((k_vals.shape[0], 2))
-    dc_pairs = np.zeros((k_vals.shape[0], 2))
+    pr_pairs = np.zeros((len(k_vals), 2))
+    dc_pairs = np.zeros((len(k_vals), 2))
     for i, k_val in enumerate(k_vals):
         boundaries_real = distance_matrix_real[:, k_val]
         boundaries_fake = distance_matrix_fake[:, k_val]

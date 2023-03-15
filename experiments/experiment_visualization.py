@@ -102,6 +102,15 @@ def plotCurve(curve, label_text):
     plt.xlabel("Recall")
     plt.ylabel("Precision")
 
+def plotErrorbar(title_text, x, means, stds, save_path, save=False):
+    plt.title(title_text)
+    plt.xlabel('Dimensions')
+    plt.ylabel('Distance')
+    plt.ylim([0, .6])
+    plt.errorbar(x, means, stds, linestyle='None', marker='o', color='blue')
+    if save:
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
 
 def specialAnnotate(text, coords, fontsize=12):
     plt.annotate(text, coords,
