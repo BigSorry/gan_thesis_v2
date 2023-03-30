@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from experiments import create_experiment as exp
@@ -5,24 +6,27 @@ from experiments import  distributions as dist
 import matplotlib.pyplot as plt
 import visualize as plotting
 import experiments.experiment_visualization as exp_vis
+def plotErrorbars(dataframe, dimensions, k_vals, score_names, map_path):
+    for score_name in score_names:
+        score_map = f"{map_path}/{score_name}/"
+        if not os.path.exists(score_map):
+            os.makedirs(score_map)
+        for dim in dimensions:
+            save_path = f"{score_map}/dim{dim}.png"
+            plt.figure()
+            plt.title(f"Dimension {dim}")
+            plt.xlabel("factor")
+            for k_val in k_vals:
+                sel_data = dataframe.loc[(dataframe["dimension"] == dim) & (dataframe["k_val"] == k_val), :]
+                grouped = sel_data.groupby(["dimension", "lambda_factor"]).agg([np.mean, np.std]).reset_index()
 
-def plotLine(dataframe, dimensions):
-    grouped = dataframe.groupby(["dimension", "lambda_factor"]).mean().reset_index()
-    score_names = ["precision", "recall", "density", "coverage"]
-    score_names = ["recall", "coverage"]
-    for dim in dimensions:
-        sel_data = grouped.loc[grouped["dimension"] == dim, :]
-        plt.figure()
-        plt.title(f"Dimension {dim}")
-        plt.xlabel("factor")
-        plt.ylim([0, 1.1])
-        for score_name in score_names:
-            score_means = sel_data[score_name]
-            factors = sel_data["lambda_factor"]
-            plt.plot(factors, score_means, label=score_name)
-        plt.legend()
-
-    plt.show()
+                score_means = grouped[score_name]["mean"]
+                score_std = grouped[score_name]["std"]
+                factors = grouped["lambda_factor"]
+                plt.errorbar(factors, score_means, score_std, linestyle='None', marker='o', label=f"{score_name}_k{k_val}")
+            plt.legend()
+            plt.savefig(save_path, bbox_inches='tight')
+            plt.close()
 
 
 def getDistributions(iterations, sample_sizes, dimensions, lambda_factors, distribution_name):
@@ -30,50 +34,65 @@ def getDistributions(iterations, sample_sizes, dimensions, lambda_factors, distr
     for iter in range(iterations):
         for samples in sample_sizes:
             for dim in dimensions:
-                key = (iter, samples, dim)
                 reference_distribution, scaled_distributions = dist.getDensities(samples, dim, lambda_factors,
                                                                      distribution_name=distribution_name)
-                dict[key] = {"reference":reference_distribution, "scaled": scaled_distributions}
+                for index, scaled_distribution in enumerate(scaled_distributions):
+                    key = (iter, samples, dim,lambda_factors[index])
+                    dict[key] = {"reference":reference_distribution, "scaled": scaled_distribution}
     return dict
-def gaussianLine():
-    # Key is name which is scaled and value corresponding value for method calling
-    scaling_info = {"fake_scaled": False, "real_scaled": True}
-    scaling_info = {"fake_scaled": False}
-    iterations = 2
-    sample_sizes = [2000]
-    sample_sizes = [1000]
-    dimensions = [2, 8, 16, 32, 64]
-    dimensions = [2, 8, 16, 32, 64]
-    lambda_factors = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
-    k_vals = [1]
-    distribution_name = "gaussian"
-    #map_path = f"C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/{distribution_name}/{name}/"
+def getScores(target_distribution, scaled_distribution, k_vals, real_scaling=False):
+    scores = []
+    if real_scaling:
+        pr_pairs, dc_pairs = exp.getKNN(scaled_distribution, target_distribution, k_vals)
+    else:
+        pr_pairs, dc_pairs = exp.getKNN(target_distribution, scaled_distribution, k_vals)
+    for i in range(len(k_vals)):
+        precision = pr_pairs[i, 0]
+        recall = pr_pairs[i, 1]
+        density = dc_pairs[i, 0]
+        coverage = dc_pairs[i, 1]
+        scores.append([k_vals[i], precision, recall, density, coverage])
 
-    headers = ["iteration", "dimension", "lambda_factor", "k_val", "precision",
-               "recall", "density", "coverage"]
-    all_rows = []
-    distribution_dict = getDistributions(iterations, sample_sizes, dimensions, lambda_factors, distribution_name)
-    for key, value in distribution_dict.items():
+    return scores
+def makeRows(distribution_dict, k_vals, real_scaling=False):
+    rows = []
+    for key, distribution_info in distribution_dict.items():
         iter = key[0]
         dim = key[2]
-        reference_distribution = value["reference"]
-        scaled_distributions = value["scaled"]
+        scaling_factor = key[3]
+        reference_distribution = distribution_info["reference"]
+        scaled_distribution = distribution_info["scaled"]
+        # List of row scores where length depends on the amount of k-values
+        scores = getScores(reference_distribution, scaled_distribution, k_vals, real_scaling)
+        for score in scores:
+            row = [iter, dim, scaling_factor] + score
+            rows.append(row)
 
-        for index, scaled_distribution in enumerate(scaled_distributions):
-            pr_pairs, dc_pairs = exp.getKNN(reference_distribution, scaled_distribution, k_vals)
+    return rows
+def gaussianExperiment():
+    # Key is name which is scaled and value corresponding value for method calling
+    iterations = 10
+    sample_sizes = [5000]
+    dimensions = [2, 16, 64]
+    lambda_factors = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
+    k_vals = [1, sample_sizes[0]-1]
+    distribution_name = "gaussian"
+    headers = ["iteration", "dimension", "lambda_factor", "k_val", "precision",
+               "recall", "density", "coverage"]
+    distribution_dict = getDistributions(iterations, sample_sizes, dimensions, lambda_factors, distribution_name)
 
-            scale_factors = [lambda_factors[0], lambda_factors[index]]
-            for i in range(len(k_vals)):
-                precision = pr_pairs[i, 0]
-                recall = pr_pairs[i, 1]
-                density = dc_pairs[i, 0]
-                coverage = dc_pairs[i, 1]
+    fake_scaled_rows = makeRows(distribution_dict, k_vals, real_scaling=False)
+    dataframe = pd.DataFrame(data=fake_scaled_rows, columns=headers)
+    score_names = ["precision", "recall", "density", "coverage"]
+    map_path = "C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/gaussian/fake_scaled/"
+    plotErrorbars(dataframe, dimensions, k_vals, score_names, map_path)
+
+    real_scaled_rows = makeRows(distribution_dict, k_vals, real_scaling=True)
+    dataframe = pd.DataFrame(data=real_scaled_rows, columns=headers)
+    score_names = ["precision", "recall", "density", "coverage"]
+    map_path = "C:/Users/lexme/Documents/gan_thesis_v2.2/gan_thesis_v2/gaussian/real_scaled/"
+    plotErrorbars(dataframe, dimensions, k_vals, score_names, map_path)
 
 
-                all_rows.append([iter, dim, scale_factors[1], k_vals[i],
-                                 precision, recall, density, coverage])
-
-    dataframe = pd.DataFrame(data=all_rows, columns=headers)
-    plotLine(dataframe, dimensions)
-
-gaussianLine()
+gaussianExperiment()
+plt.show()
