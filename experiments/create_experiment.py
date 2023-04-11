@@ -43,6 +43,18 @@ def getKNN(real_data, fake_data, k_vals):
 
     return [pr_pairs, dc_pairs]
 
+def getKNN(distance_real, distance_fake, distance_pairs, k_vals):
+    pr_pairs = np.zeros((len(k_vals), 2))
+    dc_pairs = np.zeros((len(k_vals), 2))
+    for i, k_val in enumerate(k_vals):
+        boundaries_real = distance_real[:, k_val]
+        boundaries_fake = distance_fake[:, k_val]
+        precision, recall, density, coverage = util.getScores(distance_pairs, boundaries_fake, boundaries_real, k_val)
+        pr_pairs[i, :] = [precision, recall]
+        dc_pairs[i, :] = [density, coverage]
+
+    return [pr_pairs, dc_pairs]
+
 ## Not used atm
 def getCurves(real_data, fake_data):
     params = {"k_cluster": 20, "angles": 1001, "kmeans_runs": 2}
@@ -71,36 +83,7 @@ def getStats(curve, metric_points):
 
     return np.array(points_above), np.array(nearest_distance)
 
-def doExperiment(distribution_name, distribution, other_distribution, real_factor, other_factor, k_vals, save_curve=False, map_path=""):
-    curve_methods = False
-    pr_pairs, dc_pairs = getKNN(distribution, other_distribution, k_vals)
-    scale_factors = [real_factor, other_factor]
-    curve_classifier, curve_var_dist = getGroundTruth(distribution_name, distribution, other_distribution, scale_factors)
-    pr_above, pr_nearest_distances = getStats(curve_var_dist, pr_pairs)
-    dc_above, dc_nearest_distances = getStats(curve_var_dist, dc_pairs)
 
-    if save_curve:
-        plt.figure()
-        dimension = distribution.shape[1]
-        sample_size = distribution.shape[0]
-        dimension_map = f"{map_path}/curve/s={sample_size}_d={dimension}/"
-        if not os.path.exists(dimension_map):
-            os.makedirs(dimension_map)
-        save_path = f"{dimension_map}/params_r{real_factor}_f{other_factor}.png"
-        if dimension == 2:
-            plt.subplot(1, 2, 1)
-            exp_plot.plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-            exp_plot.plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=False)
-            plt.subplot(1, 2, 2)
-            exp_plot.plotDistributions(distribution, other_distribution, "", save_path, save=True)
-        else:
-            exp_plot.plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=False)
-            exp_plot.plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_vals, save_path, save=True)
-
-        # plt.subplot(1, 3, 3)
-        # plotStats(pr_above, dc_above, save_path, save=save_curve)
-
-    return pr_above, dc_above, pr_nearest_distances, dc_nearest_distances
 
 
 

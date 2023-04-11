@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visualize as plotting
 from sklearn.metrics import pairwise_distances
+import os
+
+
+
 def getLambdas(angle_count, epsilon= 1e-10):
     epsilon = 1e-10
     angles = np.linspace(epsilon, np.pi / 2 - epsilon, num=angle_count)

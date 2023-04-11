@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -23,11 +24,9 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
         plt.savefig(path)
 
 # Plotting is reversed to get recall on x axis
-def plotKNNMetrics(pr_pairs, dc_pairs, pr_above, dc_above, k_values, save_path, save=True):
+def plotKNNMetrics(pr_pairs, dc_pairs, k_values, save_path, save=True):
     annotate_text = [f"k={k}" for k in k_values]
     plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="yellow", label=f"Precision_Recall_KNN")
-    #plt.scatter(pr_pairs[pr_above, 1], pr_pairs[pr_above, 0], c="green", label=f"Upper_Precision_Recall_KNN")
-    #plt.scatter(dc_pairs[~dc_above, 1], dc_pairs[~dc_above, 0], c="yellow", label=f"Under_Density_Coverage_KNN")
     plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="black", label=f"Density_Coverage_KNN")
     for index, text in enumerate(annotate_text):
         pr_coords = (pr_pairs[index, 1], pr_pairs[index, 0])
@@ -59,10 +58,10 @@ def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
         path = f"C:/Users/lexme/Documents/gan_thesis_v2/plot_paper/gaussian/scale_{scale_factors}.png"
         plt.savefig(path)
 
-def plotDistributions(real_data, fake_data, title_text, save_path, save=False):
+def plotDistributions(real_data, fake_data, r_order, f_order, title_text, save_path, save=False):
     plt.title(title_text)
-    plt.scatter(real_data[:, 0], real_data[:, 1], c="green", alpha=0.75, label="Real data")
-    plt.scatter(fake_data[:, 0], fake_data[:, 1], c="red", alpha=1, label="Fake data")
+    plt.scatter(real_data[:, 0], real_data[:, 1], c="green", zorder=r_order, label="Real data")
+    plt.scatter(fake_data[:, 0], fake_data[:, 1], c="red", zorder=f_order, label="Fake data")
     plt.legend(loc="lower right")
     if save:
         plt.savefig(save_path, bbox_inches='tight')
@@ -127,3 +126,24 @@ def specialAnnotate(text, coords, fontsize=12):
     plt.annotate(text, coords,
                  xytext=(10, -5), textcoords='offset points',
                  family='sans-serif', fontsize=fontsize, color='darkslategrey')
+
+def saveLambaBoxplot(dataframe, score_name, map_path):
+    dimensions = dataframe["dimension"].unique()
+    lambda_factors = dataframe["lambda_factor"].unique()
+    score_map = f"{map_path}/{score_name}/"
+    if not os.path.exists(score_map):
+        os.makedirs(score_map)
+    for dim in dimensions:
+        for scale in lambda_factors:
+            save_path = f"{score_map}/dim{dim}_lambda{scale}.png"
+            sel_data = dataframe.loc[(dataframe["dimension"] == dim) & (dataframe["lambda_factor"] == scale), :]
+            grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
+            score_means = grouped[score_name]["mean"]
+            score_std = grouped[score_name]["std"]
+            k_vals = grouped["k_val"]
+            plt.figure(figsize=(14, 6))
+            plt.errorbar(k_vals, score_means, score_std, linestyle='None', marker='o')
+            plt.ylim([0, 1.1])
+            plt.xlabel("K-value")
+            plt.savefig(save_path, bbox_inches='tight')
+            plt.close()
