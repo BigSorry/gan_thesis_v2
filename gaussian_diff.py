@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import visualize as plotting
 import experiments.experiment_visualization as exp_vis
 import helper_functions as helper
-import helper_functions as util
+import save_data as save_data
 
 # TODO Refactoring
 def plotHeatMaps(dataframe, sample_size, scaling_factor, map_path):
@@ -37,10 +37,6 @@ def plotHeatMaps(dataframe, sample_size, scaling_factor, map_path):
     # plt.figure(figsize=(14, 6))
     # plotting.HeatMapPivot(dc_second_pivot, title_text=f"percentage points overestimation",
     #                       save=True, save_path=dc_save_path)
-
-def plotBoxplot(dimensions, scores, save_path):
-    plt.figure(figsize=(14, 6))
-    exp_vis.boxPlot("", dimensions, scores, save=True, save_path=save_path)
 
 def runExperiment(distance_dict, reference_distribution, scaled_distribution , k_vals, lambda_params, real_scaling):
     constant_factor = lambda_params[0]
@@ -90,79 +86,26 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
 
     return pr_dataframe, dc_dataframe
 
-def plotLambaBoxplot(dataframe, lambda_factors, sample_size, map_path):
-    distance_scores = ["pr_nearest_distance" , "dc_nearest_distance"]
-    for scale in lambda_factors:
-        grouped_data = dataframe.loc[dataframe["lambda_factor"] == scale, :].groupby(["dimension"]) \
-            .agg([np.mean, np.std, np.min, np.max]).reset_index()
-        dimensions = grouped_data["dimension"]
-        for name in distance_scores:
-            save_path = f"{map_path}{name[:2]}_lambda_{scale}_s{sample_size}.png"
-            distances = grouped_data[name]
-            plotBoxplot(dimensions, distances, save_path)
-    distance_scores = ["pr_nearest_distance", "dc_nearest_distance"]
-    for scale in lambda_factors:
-        grouped_data = dataframe.loc[dataframe["lambda_factor"] == scale, :].groupby(["dimension"]) \
-            .agg([np.mean, np.std, np.min, np.max]).reset_index()
-        dimensions = grouped_data["dimension"]
-        for name in distance_scores:
-            save_path = f"{map_path}{name[:2]}_lambda_{scale}_s{sample_size}.png"
-            distances = grouped_data[name]
-            plotBoxplot(dimensions, distances, save_path)
-
-
-def saveDistances(distribution_dict, save, save_path):
-    if save:
-        distance_matrix_dict = {}
-        for key, samples in distribution_dict.items():
-            (iter, sample_size, dimension, scale) = key
-            if scale == 1:
-                distance_matrix_dict[key] = {}
-                for other_key , other_samples in distribution_dict.items():
-                    (other_iter, other_sample_size, other_dimension, Other_scale) = other_key
-                    if iter == other_iter and sample_size == other_sample_size and dimension == other_dimension:
-                        distance_matrix_dict[key][other_key] = {}
-                        distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(samples, other_samples)
-                        distance_matrix_dict[key][other_key]["real"] = distance_matrix_real
-                        distance_matrix_dict[key][other_key]["fake"] = distance_matrix_fake
-                        distance_matrix_dict[key][other_key]["real_fake"] = distance_matrix_pairs
-        helper.savePickle(save_path, distance_matrix_dict)
-    distance_matrix_dict = helper.readPickle(save_path)
-
-    return distance_matrix_dict
-
-
-def saveDistributions(save_distributions, save_path):
-    iterations = 2
-    sample_sizes = [2000]
-    dimensions = [2]
-    lambda_factors = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
-    if save_distributions:
-        distribution_dict = dist.saveDistributions(iterations, sample_sizes, dimensions, lambda_factors, save_path)
-    else:
-        distribution_dict = helper.readPickle(save_path)
-
-    return distribution_dict
-
 def doBoxplots(dataframe, score_names, save_path_map):
     for score_name in score_names:
         exp_vis.saveLambaBoxplot(dataframe,  score_name, save_path_map)
 
 def prepData():
-    saving = True
     save_path_distributions = "./gaussian/data/distributions.pkl"
-    save_paath_distances = "./gaussian/data/distance_matrices.pkl"
-    distribution_dict = saveDistributions(saving, save_path_distributions)
-    _ = saveDistances(distribution_dict, saving, save_paath_distances)
+    save_path_distances = "./gaussian/data/distance_matrices.pkl"
+    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": [2],
+                  "lambda_factors":  np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])}
+    save_data.saveData(save_path_distributions, save_path_distances, param_dict)
 
 def runGaussian():
+    t = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
     # Read Data
     save_path_distributions = "./gaussian/data/distributions.pkl"
     save_path_distance = "./gaussian/data/distance_matrices.pkl"
     distribution_dict = helper.readPickle(save_path_distributions)
     distance_matrix_dict = helper.readPickle(save_path_distance)
     print("reading done")
-    k_vals = [i for i in range(1, 100, 1)]
+    k_vals = [i for i in range(1, 1000, 1)]
     pr_dataframe, dc_dataframe = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=True)
     fake_pr_dataframe, fake_dc_datafram = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=False)
 
@@ -180,5 +123,5 @@ def runGaussian():
 
 
 #prepData()
-#runGaussian()
+runGaussian()
 

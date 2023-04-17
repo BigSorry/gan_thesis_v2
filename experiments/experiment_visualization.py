@@ -147,3 +147,22 @@ def saveLambaBoxplot(dataframe, score_name, map_path):
             plt.xlabel("K-value")
             plt.savefig(save_path, bbox_inches='tight')
             plt.close()
+
+def saveLambaBoxplotCombine(dataframe, score_name, map_path):
+    dimensions = dataframe["dimension"].unique()
+    score_map = f"{map_path}/{score_name}/"
+    if not os.path.exists(score_map):
+        os.makedirs(score_map)
+    for dim in dimensions:
+        save_path = f"{score_map}/dim{dim}.png"
+        sel_data = dataframe.loc[(dataframe["dimension"] == dim), :]
+        grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
+        score_means = grouped[score_name]["mean"]
+        score_std = grouped[score_name]["std"]
+        k_vals = grouped["k_val"]
+        plt.figure(figsize=(14, 6))
+        plt.errorbar(k_vals, score_means, score_std, linestyle='None', marker='o')
+        plt.ylim([0, 1.1])
+        plt.xlabel("K-value")
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()

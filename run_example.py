@@ -21,21 +21,29 @@ def doPlots(curve_var_dist, reference_distribution, scaled_distribution, lambda_
     plt.subplot(1, 2, 2)
     exp_vis.plotDistributions(reference_distribution, scaled_distribution, real_z, fake_z, "", save_path, save=True)
 
+def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
+    low_k = [i for i in range(1, low_boundary, step_low)]
+    high_k = [50, 100, 500, 750, 999]
+    all_k = low_k + high_k
+
+    return all_k
+
 def runExample(real_scaled):
     save_path_distributions = "./gaussian/data/distributions.pkl"
     save_path_distance = "./gaussian/data/distance_matrices.pkl"
     distribution_dict = helper.readPickle(save_path_distributions)
     distance_matrix_dict = helper.readPickle(save_path_distance)
-    k_vals = [i for i in range(1, 10, 1)]
+    sample_size = 1000
+    k_vals = getK(sample_size, low_boundary=10, step_low=3, step_high=400)
     constant_factor = 1
     scale_factors = [0.1, 0.25, 0.5, 0.75, 1]
     real_save_path = "./gaussian/curves/real_scaled/"
     fake_save_path = "./gaussian/curves/fake_scaled/"
-    reference_key = (0, 2000, 2, constant_factor)
+    reference_key = (0, sample_size, 2, constant_factor)
     reference_distribution = distribution_dict[reference_key]
 
     for scale_factor in scale_factors:
-        scaled_key = (0, 2000, 2, scale_factor)
+        scaled_key = (0, sample_size, 2, scale_factor)
         distance_dict = distance_matrix_dict[reference_key][scaled_key]
         scaled_distribution = distribution_dict[scaled_key]
         lambda_factors = [constant_factor, scale_factor]
