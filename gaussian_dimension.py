@@ -53,19 +53,19 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
 
 def doBoxplots(dataframe, score_names, save_path_map, factors):
     for score_name in score_names:
-        exp_vis.saveLambaBoxplotCombine(dataframe,  score_name, save_path_map, factors)
+        exp_vis.saveLambaBoxplotDimensions(dataframe,  score_name, save_path_map, factors)
 
-def prepData(factors):
-    save_path_distributions = f"./gaussian_combine/data/distributions_{factors}.pkl"
-    save_path_distances = f"./gaussian_combine/data/distance_matrices_{factors}.pkl"
-    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": [2],
+def prepData(factors, dimensions):
+    save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
+    save_path_distances = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
+    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": dimensions,
                   "lambda_factors":  factors}
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
 
 def runGaussian(factors):
     # Read Data
-    save_path_distributions = f"./gaussian_combine/data/distributions_{factors}.pkl"
-    save_path_distance = f"./gaussian_combine/data/distance_matrices_{factors}.pkl"
+    save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
+    save_path_distance = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
     distribution_dict = helper.readPickle(save_path_distributions)
     distance_matrix_dict = helper.readPickle(save_path_distance)
     print("reading done")
@@ -73,15 +73,17 @@ def runGaussian(factors):
     real_scaled_dataframe = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=True)
     fake_scaled_dataframe = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=False)
 
-    real_map_path = f"./gaussian_combine/real_scaled/"
-    fake_map_path = "./gaussian_combine/fake_scaled/"
+    real_map_path = f"./gaussian_dimension/real_scaled/"
+    fake_map_path = "./gaussian_dimension/fake_scaled/"
     score_names = ["pr_nearest_distance", "dc_nearest_distance"]
     doBoxplots(real_scaled_dataframe, score_names, real_map_path, factors)
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
 
 
 def rangeExperiment(save):
-    values = np.arange(0.01, 1.1, .1)
+    values = np.arange(0.01, 1.1, .25)
+    print(f"boundaries: {values}")
+    dimensions = [2, 16, 64]
     for index in range(values.shape[0]-1):
         start = values[index]
         end = values[index+1]
@@ -91,7 +93,7 @@ def rangeExperiment(save):
         factors_all = [1] + list(factors_rounded)
         print(factors_all)
         if save:
-            prepData(factors_all)
+            prepData(factors_all, dimensions)
         runGaussian(factors_all)
 
 

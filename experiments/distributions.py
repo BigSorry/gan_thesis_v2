@@ -27,8 +27,6 @@ def getDensities(sample_size, dimension, lambda_factors, distribution_name="gaus
     elif distribution_name == "exponential":
         return getExponential(sample_size, dimension, lambda_factors)
 
-
-
 def saveDistributions(iterations, sample_sizes, dimensions, lambda_factors, save_path):
     distribution_dict = {}
     for iter in range(iterations):

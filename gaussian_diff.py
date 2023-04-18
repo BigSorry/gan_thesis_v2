@@ -98,7 +98,6 @@ def prepData():
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
 
 def runGaussian():
-    t = np.array([1, 0.75, 0.5, 0.25, 0.1, 0.01])
     # Read Data
     save_path_distributions = "./gaussian/data/distributions.pkl"
     save_path_distance = "./gaussian/data/distance_matrices.pkl"

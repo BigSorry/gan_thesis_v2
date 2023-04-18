@@ -148,13 +148,10 @@ def saveLambaBoxplot(dataframe, score_name, map_path):
             plt.savefig(save_path, bbox_inches='tight')
             plt.close()
 
-def saveLambaBoxplotCombine(dataframe, score_name, map_path):
+def saveLambaBoxplotCombine(dataframe, score_name, map_path, factors):
     dimensions = dataframe["dimension"].unique()
-    score_map = f"{map_path}/{score_name}/"
-    if not os.path.exists(score_map):
-        os.makedirs(score_map)
     for dim in dimensions:
-        save_path = f"{score_map}/dim{dim}.png"
+        save_path = f"{map_path}/{score_name}_dim{dim}_{factors}.png"
         sel_data = dataframe.loc[(dataframe["dimension"] == dim), :]
         grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
         score_means = grouped[score_name]["mean"]
@@ -166,3 +163,21 @@ def saveLambaBoxplotCombine(dataframe, score_name, map_path):
         plt.xlabel("K-value")
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
+
+def saveLambaBoxplotDimensions(dataframe, score_name, map_path, factors):
+    plt.figure(figsize=(14, 6))
+    dimensions = dataframe["dimension"].unique()
+    for dim in dimensions:
+        sel_data = dataframe.loc[(dataframe["dimension"] == dim), :]
+        grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
+        score_means = grouped[score_name]["mean"]
+        score_std = grouped[score_name]["std"]
+        k_vals = grouped["k_val"]
+        plt.errorbar(k_vals, score_means, score_std, linestyle='None', marker='o', label=f"dim_{dim}")
+
+    plt.ylim([0, 1.1])
+    plt.xlabel("K-value")
+    plt.legend()
+    save_path = f"{map_path}/{score_name}_{factors}.png"
+    plt.savefig(save_path, bbox_inches='tight')
+    plt.close()
