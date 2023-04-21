@@ -166,18 +166,20 @@ def saveLambaBoxplotCombine(dataframe, score_name, map_path, factors):
 
 def saveLambaBoxplotDimensions(dataframe, score_name, map_path, factors):
     plt.figure(figsize=(14, 6))
+    sample_sizes = dataframe["sample_size"].unique()
     dimensions = dataframe["dimension"].unique()
-    for dim in dimensions:
-        sel_data = dataframe.loc[(dataframe["dimension"] == dim), :]
-        grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
-        score_means = grouped[score_name]["mean"]
-        score_std = grouped[score_name]["std"]
-        k_vals = grouped["k_val"]
-        plt.errorbar(k_vals, score_means, score_std, linestyle='None', marker='o', label=f"dim_{dim}")
+    for sample_size in sample_sizes:
+        for dim in dimensions:
+            sel_data = dataframe.loc[(dataframe["dimension"] == dim) & (dataframe["sample_size"] == sample_size), :]
+            grouped = sel_data.groupby(["k_val"]).agg([np.mean, np.std]).reset_index()
+            score_means = grouped[score_name]["mean"]
+            score_std = grouped[score_name]["std"]
+            k_vals = grouped["k_val"]
+            plt.errorbar(k_vals, score_means, score_std, linestyle='None', marker='o', label=f"dim_{dim}")
 
-    plt.ylim([0, 1.1])
-    plt.xlabel("K-value")
-    plt.legend()
-    save_path = f"{map_path}/{score_name}_{factors}.png"
-    plt.savefig(save_path, bbox_inches='tight')
-    plt.close()
+        plt.ylim([0, 1.1])
+        plt.xlabel("K-value")
+        plt.legend()
+        save_path = f"{map_path}/{score_name}_s{sample_size}_{factors}.png"
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()

@@ -29,7 +29,7 @@ def runExperiment(distance_dict, reference_distribution, scaled_distribution , k
     return pr_rows, dc_rows
 
 def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
-    headers = ["iteration", "dimension", "lambda_factor", "k_val",
+    headers = ["iteration", "sample_size", "dimension", "lambda_factor", "k_val",
                   "pr_nearest_distance", "dc_nearest_distance"]
     row_data = []
     standard_scale = 1
@@ -41,7 +41,7 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
         distance_dict = distance_matrix_dict[reference_key][key]
         pr_rows, dc_rows = runExperiment(distance_dict, reference_distribution, other_distribution, k_vals, lambda_params, real_scaling=real_scaling)
         for i in range(pr_rows.shape[0]):
-            other_info = [iter, dimension, other_scale,  k_vals[i]]
+            other_info = [iter, sample_size, dimension, other_scale,  k_vals[i]]
             pr_distance = pr_rows[i,3]
             dc_distance = dc_rows[i, 3]
             row = other_info + [pr_distance, dc_distance]
@@ -50,18 +50,15 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
     dataframe = pd.DataFrame(data=row_data, columns=headers)
 
     return dataframe
-
 def doBoxplots(dataframe, score_names, save_path_map, factors):
     for score_name in score_names:
         exp_vis.saveLambaBoxplotDimensions(dataframe,  score_name, save_path_map, factors)
-
 def prepData(factors, dimensions):
     save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
     save_path_distances = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
-    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": dimensions,
+    param_dict = {"iterations": 5, "sample_sizes": [1000, 3000], "dimensions": dimensions,
                   "lambda_factors":  factors}
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
-
 def runGaussian(factors):
     # Read Data
     save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
@@ -79,7 +76,7 @@ def runGaussian(factors):
     doBoxplots(real_scaled_dataframe, score_names, real_map_path, factors)
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
 def oneRangeExperiment(save, factors):
-    dimensions = [2, 16, 36, 64, 128, 256]
+    dimensions = [2, 16, 64]
     print(factors)
     if save:
         prepData(factors, dimensions)
