@@ -78,8 +78,12 @@ def runGaussian(factors):
     score_names = ["pr_nearest_distance", "dc_nearest_distance"]
     doBoxplots(real_scaled_dataframe, score_names, real_map_path, factors)
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
-
-
+def oneRangeExperiment(save):
+    factors = [2**(-i) for i in range(8)]
+    print(factors)
+    if save:
+        prepData(factors)
+    runGaussian(factors)
 def rangeExperiment(save):
     values = np.arange(0.01, 1.1, .1)
     for index in range(values.shape[0]-1):
@@ -95,4 +99,4 @@ def rangeExperiment(save):
         runGaussian(factors_all)
 
 
-rangeExperiment(save=False)
+oneRangeExperiment(save=True)
