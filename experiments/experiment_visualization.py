@@ -24,18 +24,15 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
         plt.savefig(path)
 
 # Plotting is reversed to get recall on x axis
-def plotKNNMetrics(pr_pairs, dc_pairs, k_values, save_path, save=True):
+def plotKNNMetrics(score_pair,  k_values, label_name, color, save_path, save=True):
     annotate_text = [f"k={k}" for k in k_values]
-    plt.scatter(pr_pairs[:, 1], pr_pairs[:, 0], c="yellow", label=f"Precision_Recall_KNN")
-    plt.scatter(dc_pairs[:, 1], dc_pairs[:, 0], c="black", label=f"Density_Coverage_KNN")
+    plt.scatter(score_pair[:, 1], score_pair[:, 0], c=color, label=label_name)
     for index, text in enumerate(annotate_text):
-        pr_coords = (pr_pairs[index, 1], pr_pairs[index, 0])
-        dc_coords = (dc_pairs[index, 1], dc_pairs[index, 0])
-        specialAnnotate(text, pr_coords, fontsize=14)
-        specialAnnotate(text, dc_coords, fontsize=14)
-    plt.legend(loc='upper center', bbox_to_anchor=(1, 1.15),
-               fancybox=True, shadow=True, ncol=2, fontsize=9)
+        coords = (score_pair[index, 1], score_pair[index, 0])
+        specialAnnotate(text, coords, fontsize=14)
     if save:
+        plt.legend(loc='upper center', bbox_to_anchor=(1, 1.15),
+                   fancybox=True, shadow=True, ncol=2, fontsize=9)
         plt.savefig(save_path)
         plt.close()
 

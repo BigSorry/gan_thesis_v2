@@ -56,7 +56,7 @@ def doBoxplots(dataframe, score_names, save_path_map, factors):
 def prepData(factors, dimensions):
     save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
     save_path_distances = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
-    param_dict = {"iterations": 5, "sample_sizes": [1000, 3000], "dimensions": dimensions,
+    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": dimensions,
                   "lambda_factors":  factors}
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
 def runGaussian(factors):
@@ -77,7 +77,7 @@ def runGaussian(factors):
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
 def oneRangeExperiment(save, factors):
     dimensions = [2, 16, 64]
-    print(factors)
+    dimensions = [1000]
     if save:
         prepData(factors, dimensions)
     runGaussian(factors)
@@ -97,5 +97,10 @@ def rangeExperiment(save):
             prepData(factors_all, dimensions)
         runGaussian(factors_all)
 
-factors = [2**(-i) for i in range(8)]
+factors = [1.01**(-i) for i in range(5)]
+other_factors = [1.1**(-i) for i in range(7)]
+other_factors2 = [2**(-i) for i in range(5)]
+all_factors = factors + other_factors[1:] + other_factors2[1:]
+factors = np.round(all_factors, 2)
+print(factors)
 oneRangeExperiment(True, factors)
