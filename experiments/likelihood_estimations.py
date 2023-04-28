@@ -9,6 +9,7 @@ def multiGaus(mixture_data, dimension, scale_params):
     densities_real = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_real)
     densities_fake = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_fake)
 
+
     return densities_real, densities_fake
 
 def multiExponential(mixture_data, dimension, scale_params):

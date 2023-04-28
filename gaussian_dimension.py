@@ -32,11 +32,11 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
     headers = ["iteration", "sample_size", "dimension", "lambda_factor", "k_val",
                   "pr_nearest_distance", "dc_nearest_distance"]
     row_data = []
-    standard_scale = 1
+    base_scale = (list(distance_matrix_dict.keys())[0])[-1]
     for key, other_distribution in distribution_dict.items():
         (iter, sample_size, dimension, other_scale) = key
-        lambda_params = [standard_scale, other_scale]
-        reference_key = (iter, sample_size, dimension, standard_scale)
+        lambda_params = [base_scale, other_scale]
+        reference_key = (iter, sample_size, dimension, base_scale)
         reference_distribution = distribution_dict[reference_key]
         distance_dict = distance_matrix_dict[reference_key][key]
         pr_rows, dc_rows = runExperiment(distance_dict, reference_distribution, other_distribution, k_vals, lambda_params, real_scaling=real_scaling)
@@ -56,7 +56,7 @@ def doBoxplots(dataframe, score_names, save_path_map, factors):
 def prepData(factors, dimensions):
     save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
     save_path_distances = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
-    param_dict = {"iterations": 2, "sample_sizes": [1000], "dimensions": dimensions,
+    param_dict = {"iterations": 10, "sample_sizes": [1000], "dimensions": dimensions,
                   "lambda_factors":  factors}
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
 def runGaussian(factors):
@@ -75,9 +75,7 @@ def runGaussian(factors):
     score_names = ["pr_nearest_distance", "dc_nearest_distance"]
     doBoxplots(real_scaled_dataframe, score_names, real_map_path, factors)
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
-def oneRangeExperiment(save, factors):
-    dimensions = [2, 16, 64]
-    dimensions = [1000]
+def oneRangeExperiment(save, factors, dimensions):
     if save:
         prepData(factors, dimensions)
     runGaussian(factors)
@@ -97,10 +95,8 @@ def rangeExperiment(save):
             prepData(factors_all, dimensions)
         runGaussian(factors_all)
 
-factors = [1.01**(-i) for i in range(5)]
-other_factors = [1.1**(-i) for i in range(7)]
-other_factors2 = [2**(-i) for i in range(5)]
-all_factors = factors + other_factors[1:] + other_factors2[1:]
-factors = np.round(all_factors, 2)
+dimensions = [64]
+factors = [.2*1.1 ** (-i) for i in range(8)]
+factors = np.round(factors, 4)
 print(factors)
-oneRangeExperiment(True, factors)
+oneRangeExperiment(True, factors, dimensions)

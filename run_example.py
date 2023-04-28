@@ -19,7 +19,7 @@ def doPlots(curve_var_dist, reference_distribution, scaled_distribution, lambda_
     exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
     exp_vis.plotKNNMetrics(pr_pairs,  k_vals, "PR_KNN", "black", save_path, save=False)
     exp_vis.plotKNNMetrics(dc_pairs,  k_vals, "DC_KNN", "yellow", save_path, save=False)
-    plt.legend(loc='upper center', bbox_to_anchor=(1, 1.15),
+    plt.legend(loc='upper center', bbox_to_anchor=(0, 1.15),
                fancybox=True, shadow=True, ncol=2, fontsize=9)
     plt.subplot(1, 2, 2)
     exp_vis.plotDistributions(reference_distribution, scaled_distribution, real_z, fake_z, "", save_path, save=True)
@@ -27,7 +27,7 @@ def doPlots(curve_var_dist, reference_distribution, scaled_distribution, lambda_
 def singlePlot(curve_var_dist, lambda_factors, pr_pairs, dc_pairs, k_vals, save_path):
     plt.figure()
     exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
-    exp_vis.plotKNNMetrics(pr_pairs,  k_vals, "PR_KNN", "black", save_path, save=True)
+    exp_vis.plotKNNMetrics(pr_pairs,  k_vals, "PR_KNN", "black", save_path, save=False)
     exp_vis.plotKNNMetrics(dc_pairs,  k_vals, "DC_KNN", "yellow", save_path, save=True)
 
 
@@ -39,30 +39,27 @@ def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
 
     return all_k
 
-def runExample(factors , save_path_distributions, save_path_distance, real_scaled):
+def runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled):
     distribution_dict = helper.readPickle(save_path_distributions)
     distance_matrix_dict = helper.readPickle(save_path_distance)
     sample_size = 1000
-    dimensions = [2, 16, 64]
-    dimensions = [1000]
     k_vals = getK(sample_size, low_boundary=10, step_low=1, step_high=10)
-    constant_factor = 1
-    real_save_path = "./gaussian_dimension/curves/real_scaled/"
-    fake_save_path = "./gaussian_dimension/curves/fake_scaled/"
-
+    base_scale  = (list(distance_matrix_dict.keys())[0])[-1]
+    real_save_path = f"./gaussian_dimension/curves/real_scaled/"
+    fake_save_path = f"./gaussian_dimension/curves/fake_scaled/"
 
     for scale_factor in factors:
         for dim in dimensions:
             save_name = f"dim{dim}_scale{scale_factor}.png"
-            reference_key = (0, sample_size, dim, constant_factor)
+            reference_key = (0, sample_size, dim, base_scale)
             reference_distribution = distribution_dict[reference_key]
             scaled_key = (0, sample_size, dim, scale_factor)
             distance_dict = distance_matrix_dict[reference_key][scaled_key]
             scaled_distribution = distribution_dict[scaled_key]
-            lambda_factors = [constant_factor, scale_factor]
+            lambda_factors = [base_scale, scale_factor]
             if real_scaled:
                 save_path = real_save_path + save_name
-                lambda_factors = [scale_factor, constant_factor]
+                lambda_factors = [scale_factor, base_scale]
                 pr_pairs, dc_pairs = exp.getKNN(distance_dict["real"], distance_dict["fake"], distance_dict["real_fake"], k_vals)
                 curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", scaled_distribution, reference_distribution, lambda_factors)
             else:
@@ -76,14 +73,12 @@ def runExample(factors , save_path_distributions, save_path_distance, real_scale
             else:
                 singlePlot(curve_var_dist, lambda_factors, pr_pairs, dc_pairs, k_vals, save_path)
 
-factors = [1.01**(-i) for i in range(5)]
-other_factors = [1.1**(-i) for i in range(5)]
-other_factors2 = [2**(-i) for i in range(5)]
-all_factors = factors + other_factors[1:] + other_factors2[1:]
-factors = np.round(all_factors, 2)
-print(factors)
+
+dimensions = [64]
+factors = [.2*1.1 ** (-i) for i in range(8)]
+factors = np.round(factors, 4)
 print(factors)
 save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
 save_path_distance = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
-runExample(factors, save_path_distributions, save_path_distance, real_scaled=True)
-runExample(factors, save_path_distributions, save_path_distance, real_scaled=False)
+runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=True)
+runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=False)

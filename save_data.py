@@ -18,11 +18,11 @@ def saveDistributions(param_dict, save_path):
                     distribution_dict[key] = samples
 
     helper.savePickle(save_path, distribution_dict)
-def saveDistances(distribution_dict, save_path):
+def saveDistances(distribution_dict, reference_scale, save_path):
     distance_matrix_dict = {}
     for key, samples in distribution_dict.items():
         (iter, sample_size, dimension, scale) = key
-        if scale == 1:
+        if scale == reference_scale:
             distance_matrix_dict[key] = {}
             for other_key , other_samples in distribution_dict.items():
                 (other_iter, other_sample_size, other_dimension, Other_scale) = other_key
@@ -33,7 +33,10 @@ def saveDistances(distribution_dict, save_path):
                     distance_matrix_dict[key][other_key]["fake"] = distance_matrix_fake
                     distance_matrix_dict[key][other_key]["real_fake"] = distance_matrix_pairs
     helper.savePickle(save_path, distance_matrix_dict)
+
+# We assume the first scale is the reference point for distributions
 def saveData(save_path_distributions, save_path_distances, param_dict):
     saveDistributions(param_dict, save_path_distributions)
     distribution_dict = helper.readPickle(save_path_distributions)
-    saveDistances(distribution_dict, save_path_distances)
+    reference_scale = param_dict["lambda_factors"][0]
+    saveDistances(distribution_dict, reference_scale, save_path_distances)
