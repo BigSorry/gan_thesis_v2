@@ -13,9 +13,8 @@ def multiGaus(real_data, fake_data, dimension, scale_params):
     densities_real = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_real)
     densities_fake = multivariate_normal.pdf(mixture_data, mean=mean_vec, cov=cov_fake)
 
-
     return densities_real, densities_fake
-
+    
 def getGaussian(sample_size, dimension, other_scale):
     mean_vec = np.zeros(dimension)
     identity_cov = np.eye(dimension)
@@ -25,14 +24,11 @@ def getGaussian(sample_size, dimension, other_scale):
 
     return reference_distribution, scaled_distributions
 
-
-def doCheck():
-    iters = 5
-    sample_size = 10000
-    dimensions = [1000]
-    factors = [.09*1.1 ** (-i) for i in range(5)]
-    factors = np.round(factors, 4)
-    print(factors)
+def doCheck(dimensions, factors):
+    iters = 1
+    sample_size = 1000
+    real_mean_vectors = []
+    fake_mean_vectors = []
     for i in range(iters):
         for dimension in dimensions:
             for scale in factors:
@@ -44,15 +40,34 @@ def doCheck():
                 plt.figure()
                 plt.title(lambda_factors)
                 exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
-                real_sum = np.sum(densities_real)
-                fake_sum = np.sum(densities_fake)
+                avg_ll_fake = np.mean(densities_real)
+                avg_ll_real = np.mean(densities_fake)
+                real_mean_vectors.append(avg_ll_real)
 
-                if real_sum > 0.01 or fake_sum > 0.01:
-                    print(dimension, scale)
-                    print(np.sum(densities_real))
-                    print(np.sum(densities_fake))
-                    print()
+    real_mean = np.mean(np.array(real_mean_vectors))
+    real_std = np.mean(np.std(real_mean_vectors))
+    print(real_mean, real_std)
+
+def tryValues():
+    base_values = np.linspace(0.11, 0.05, 10)
+    print(base_values)
+    dimensions = [16]
+
+    for value in base_values:
+        used_value = np.round(value, 4)
+        factors = [used_value * 1.1 ** (-i) for i in range(5)]
+        factors = np.round(factors, 2)
+        doCheck(dimensions, factors)
 
 
-doCheck()
+# dimensions = [2]
+# factors = [1 * 2 ** (-i) for i in range(8)]
+# factors = np.round(factors, 2)
+# doCheck(dimensions, factors)
+
+
+dimensions = [64]
+factors = [10*2 ** (-i) for i in range(8)]
+factors = np.round(factors, 2)
+doCheck(dimensions, factors)
 plt.show()

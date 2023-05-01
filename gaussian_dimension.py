@@ -95,8 +95,8 @@ def rangeExperiment(save):
             prepData(factors_all, dimensions)
         runGaussian(factors_all)
 
-dimensions = [64]
-factors = [.2*1.1 ** (-i) for i in range(8)]
+dimensions = [16]
+factors = [.12 * 1.1 ** (-i) for i in range(8)]
 factors = np.round(factors, 4)
 print(factors)
 oneRangeExperiment(True, factors, dimensions)

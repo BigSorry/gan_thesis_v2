@@ -68,17 +68,22 @@ def runExample(factors, dimensions, save_path_distributions, save_path_distance,
                 curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution,  scaled_distribution, lambda_factors)
 
             if dim == 2:
-                doPlots(curve_var_dist, reference_distribution, scaled_distribution, lambda_factors,
-                        pr_pairs, dc_pairs, k_vals, save_path)
+                if real_scaled:
+                    doPlots(curve_var_dist, scaled_distribution, reference_distribution, lambda_factors,
+                            pr_pairs, dc_pairs, k_vals, save_path)
+                else:
+                    doPlots(curve_var_dist, reference_distribution, scaled_distribution, lambda_factors,
+                            pr_pairs, dc_pairs, k_vals, save_path)
             else:
                 singlePlot(curve_var_dist, lambda_factors, pr_pairs, dc_pairs, k_vals, save_path)
 
 
-dimensions = [64]
-factors = [.2*1.1 ** (-i) for i in range(8)]
-factors = np.round(factors, 4)
+dimensions = [2]
+factors = [1*2 ** (-i) for i in range(8)]
+factors = np.round(factors, 2)
 print(factors)
 save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
 save_path_distance = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
 runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=True)
 runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=False)
+
