@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from experiments import create_experiment as exp
 import experiments.experiment_visualization as exp_vis
+from sklearn import metrics
 
 # Assume real and fake prior is equal
 def multiGaus(real_data, fake_data, dimension, scale_params):
@@ -27,19 +28,30 @@ def getGaussian(sample_size, dimension, other_scale):
 def doCheck(dimensions, factors):
     iters = 1
     sample_size = 1000
+    k_vals = [i for i in range(1, 1000, 10)]
     real_mean_vectors = []
     fake_mean_vectors = []
     for i in range(iters):
         for dimension in dimensions:
             for scale in factors:
                 lambda_factors = [factors[0], scale]
-                reference_distribution, scaled_distributions = getGaussian(sample_size, dimension, scale)
-                densities_real, densities_fake = multiGaus(reference_distribution, scaled_distributions, dimension, lambda_factors)
-                curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution,
-                                                                      scaled_distributions, lambda_factors)
-                plt.figure()
-                plt.title(lambda_factors)
-                exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
+                reference_distribution, scaled_distribution = getGaussian(sample_size, dimension, scale)
+                densities_real, densities_fake = multiGaus(reference_distribution, scaled_distribution, dimension, lambda_factors)
+                curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution,  scaled_distribution, lambda_factors)
+
+                auc = 0
+                #auc = metrics.auc(np.round(curve_var_dist[:, 1], 2), np.round(curve_var_dist[:, 0], 2))
+
+                if auc < 0.95 and auc > 0.05 or 1==1:
+                    plt.figure()
+                    plt.title(lambda_factors)
+                    #exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
+                    pr_pairs, dc_pairs = exp.getKNNData(reference_distribution, scaled_distribution,  k_vals)
+                    exp_vis.plotCurve(curve_classifier,  "classifier")
+                    plt.figure()
+                    plt.title(lambda_factors)
+                    exp_vis.plotCurve(curve_var_dist, "var dist")
+
                 avg_ll_fake = np.mean(densities_real)
                 avg_ll_real = np.mean(densities_fake)
                 real_mean_vectors.append(avg_ll_real)
@@ -56,7 +68,7 @@ def tryValues():
     for value in base_values:
         used_value = np.round(value, 4)
         factors = [used_value * 1.1 ** (-i) for i in range(5)]
-        factors = np.round(factors, 2)
+        factors = np.round(factors, 4)
         doCheck(dimensions, factors)
 
 
@@ -66,8 +78,8 @@ def tryValues():
 # doCheck(dimensions, factors)
 
 
-dimensions = [64]
-factors = [10*2 ** (-i) for i in range(8)]
-factors = np.round(factors, 2)
+dimensions = [2]
+factors = [1*2** (-i) for i in range(5)]
+factors = np.round(factors, 5)
 doCheck(dimensions, factors)
 plt.show()
