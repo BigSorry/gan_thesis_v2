@@ -21,7 +21,7 @@ def getGroundTruth(distribution_name, real_data, fake_data, scale_factors):
         predictions = (value*densities_real >= densities_fake).astype(int)
         diff_prec = np.sum(np.abs(value*densities_real_norm - densities_fake_norm))
         diff_recall = np.sum(np.abs(densities_real_norm - densities_fake_norm*(1/value)))
-        print(diff_prec, diff_recall)
+        #print(diff_prec, diff_recall)
         precision_hist = value*1 - diff_prec
         recall_hist = (1/value)*1 - diff_recall
         truth_labels = np.concatenate([np.ones(real_data.shape[0]), np.zeros(fake_data.shape[0])])

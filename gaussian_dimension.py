@@ -32,6 +32,7 @@ def runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling):
     headers = ["iteration", "sample_size", "dimension", "lambda_factor", "k_val",
                   "pr_nearest_distance", "dc_nearest_distance"]
     row_data = []
+    # Last key is base scale stored
     base_scale = (list(distance_matrix_dict.keys())[0])[-1]
     for key, other_distribution in distribution_dict.items():
         (iter, sample_size, dimension, other_scale) = key
@@ -59,14 +60,13 @@ def prepData(factors, dimensions):
     param_dict = {"iterations": 10, "sample_sizes": [1000], "dimensions": dimensions,
                   "lambda_factors":  factors}
     save_data.saveData(save_path_distributions, save_path_distances, param_dict)
-def runGaussian(factors):
+def runGaussian(factors, k_vals):
     # Read Data
     save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
     save_path_distance = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
     distribution_dict = helper.readPickle(save_path_distributions)
     distance_matrix_dict = helper.readPickle(save_path_distance)
     print("reading done")
-    k_vals = [i for i in range(1, 1000, 5)]
     real_scaled_dataframe = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=True)
     fake_scaled_dataframe = runMultiple(distribution_dict, distance_matrix_dict, k_vals, real_scaling=False)
 
@@ -75,28 +75,18 @@ def runGaussian(factors):
     score_names = ["pr_nearest_distance", "dc_nearest_distance"]
     doBoxplots(real_scaled_dataframe, score_names, real_map_path, factors)
     doBoxplots(fake_scaled_dataframe, score_names, fake_map_path, factors)
-def oneRangeExperiment(save, factors, dimensions):
-    if save:
-        prepData(factors, dimensions)
-    runGaussian(factors)
-def rangeExperiment(save):
-    values = np.arange(0.01, 1.1, .25)
-    print(f"boundaries: {values}")
-    dimensions = [2, 16, 36, 64, 128, 256]
-    for index in range(values.shape[0]-1):
-        start = values[index]
-        end = values[index+1]
-        new_factors = np.arange(start, end, 0.05)
-        factors_rounded = np.round(new_factors, 2)
-        # ! is needed as base
-        factors_all = [1] + list(factors_rounded)
-        print(factors_all)
-        if save:
-            prepData(factors_all, dimensions)
-        runGaussian(factors_all)
 
-dimensions = [16]
-factors = [.12 * 1.1 ** (-i) for i in range(8)]
-factors = np.round(factors, 4)
-print(factors)
-oneRangeExperiment(True, factors, dimensions)
+def runExperiment():
+    dimensions = [1000]
+    k_vals = [i for i in range(1, 1000, 5)]
+    factor_dict = util.readPickle("./d1000_factors.pkl")
+    # Saves Data distributions and the distance matrices.
+    saving = True
+    for base_factor, other_factors in factor_dict.items():
+        if len(other_factors) != 0:
+            all_factors = [base_factor] + other_factors
+            if saving:
+                prepData(all_factors, dimensions)
+            runGaussian(all_factors, k_vals)
+
+runExperiment()

@@ -44,13 +44,13 @@ def runExample(factors, dimensions, save_path_distributions, save_path_distance,
     distance_matrix_dict = helper.readPickle(save_path_distance)
     sample_size = 1000
     k_vals = getK(sample_size, low_boundary=10, step_low=1, step_high=10)
-    base_scale  = (list(distance_matrix_dict.keys())[0])[-1]
+    base_scale = (list(distance_matrix_dict.keys())[0])[-1]
     real_save_path = f"./gaussian_dimension/curves/real_scaled/"
     fake_save_path = f"./gaussian_dimension/curves/fake_scaled/"
 
     for scale_factor in factors:
         for dim in dimensions:
-            save_name = f"dim{dim}_scale{scale_factor}.png"
+            save_name = f"dim{dim}_scale_{base_scale}_{scale_factor}.png"
             reference_key = (0, sample_size, dim, base_scale)
             reference_distribution = distribution_dict[reference_key]
             scaled_key = (0, sample_size, dim, scale_factor)
@@ -77,13 +77,15 @@ def runExample(factors, dimensions, save_path_distributions, save_path_distance,
             else:
                 singlePlot(curve_var_dist, lambda_factors, pr_pairs, dc_pairs, k_vals, save_path)
 
+def makeCurves():
+    dimensions = [1000]
+    factor_dict = util.readPickle("./d1000_factors.pkl")
+    for base_factor, other_factors in factor_dict.items():
+        if len(other_factors) != 0:
+            all_factors = [base_factor] + other_factors
+            save_path_distributions = f"./gaussian_dimension/data/distributions_{all_factors}.pkl"
+            save_path_distance = f"./gaussian_dimension/data/distance_matrices_{all_factors}.pkl"
+            runExample(all_factors, dimensions, save_path_distributions, save_path_distance, real_scaled=True)
+            runExample(all_factors, dimensions, save_path_distributions, save_path_distance, real_scaled=False)
 
-dimensions = [2]
-factors = [1*2 ** (-i) for i in range(8)]
-factors = np.round(factors, 2)
-print(factors)
-save_path_distributions = f"./gaussian_dimension/data/distributions_{factors}.pkl"
-save_path_distance = f"./gaussian_dimension/data/distance_matrices_{factors}.pkl"
-runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=True)
-runExample(factors, dimensions, save_path_distributions, save_path_distance, real_scaled=False)
-
+makeCurves()

@@ -4,6 +4,7 @@ from scipy.stats import multivariate_normal
 from experiments import create_experiment as exp
 import experiments.experiment_visualization as exp_vis
 from sklearn import metrics
+import helper_functions as util
 
 # Assume real and fake prior is equal
 def multiGaus(real_data, fake_data, dimension, scale_params):
@@ -16,70 +17,106 @@ def multiGaus(real_data, fake_data, dimension, scale_params):
 
     return densities_real, densities_fake
     
-def getGaussian(sample_size, dimension, other_scale):
+def getGaussian(sample_size, dimension, lambda_factors):
     mean_vec = np.zeros(dimension)
-    identity_cov = np.eye(dimension)
-    reference_distribution = np.random.multivariate_normal(mean_vec, identity_cov, sample_size)
-    cov_mat = identity_cov*other_scale
-    scaled_distributions = np.random.multivariate_normal(mean_vec, cov_mat, sample_size)
+    cov_ref = np.eye(dimension) * lambda_factors[0]
+    cov_scaled = np.eye(dimension) * lambda_factors[1]
+    reference_distribution = np.random.multivariate_normal(mean_vec, cov_ref, sample_size)
+    scaled_distributions = np.random.multivariate_normal(mean_vec, cov_scaled, sample_size)
 
     return reference_distribution, scaled_distributions
 
-def doCheck(dimensions, factors):
-    iters = 1
-    sample_size = 1000
-    k_vals = [i for i in range(1, 1000, 10)]
-    real_mean_vectors = []
-    fake_mean_vectors = []
+def doCheck(iters, k_vals, sample_size, dimensions, factors, filter_std, real_scaling=False):
+    factors_saved = []
     for i in range(iters):
         for dimension in dimensions:
             for scale in factors:
                 lambda_factors = [factors[0], scale]
-                reference_distribution, scaled_distribution = getGaussian(sample_size, dimension, scale)
-                densities_real, densities_fake = multiGaus(reference_distribution, scaled_distribution, dimension, lambda_factors)
-                curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution,  scaled_distribution, lambda_factors)
+                reference_distribution, scaled_distribution = getGaussian(sample_size, dimension, lambda_factors)
+                if real_scaling:
+                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(scaled_distribution, reference_distribution)
+                    pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
+                else:
+                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(reference_distribution, scaled_distribution)
+                    pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
+                # Clip density
+                dc_pairs = np.clip(dc_pairs, 0, 1)
+                pr_std = np.std(pr_pairs[:, 0]) + np.std(pr_pairs[:, 1])
+                dc_std = np.std(dc_pairs[:, 0]) + np.std(dc_pairs[:, 1])
+                if pr_std > filter_std or dc_std > filter_std:
+                    factors_saved.append(scale)
+                # curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution, scaled_distribution, lambda_factors)
+                # auc = metrics.auc(np.round(curve_var_dist[:, 1], 2), np.round(curve_var_dist[:, 0], 2))
+                # if auc < 0.95 and auc > 0.05:
+                #     factors_saved.append(scale)
 
-                auc = 0
-                #auc = metrics.auc(np.round(curve_var_dist[:, 1], 2), np.round(curve_var_dist[:, 0], 2))
+    return factors_saved
+def filterValues(values, atol_val):
+    new_values = [values[0]]
+    for value in values[1:]:
+        diff = np.abs(np.array(new_values) - value)
+        close_zero = np.isclose(diff, [0], atol=atol_val)
+        if np.sum(close_zero) == 0:
+            new_values.append(value)
+    sorted = np.round(-np.sort(-np.array(new_values)), 4)
 
-                if auc < 0.95 and auc > 0.05 or 1==1:
-                    plt.figure()
-                    plt.title(lambda_factors)
-                    #exp_vis.plotTheoreticalCurve(curve_var_dist, curve_var_dist, lambda_factors, save=False)
-                    pr_pairs, dc_pairs = exp.getKNNData(reference_distribution, scaled_distribution,  k_vals)
-                    exp_vis.plotCurve(curve_classifier,  "classifier")
-                    plt.figure()
-                    plt.title(lambda_factors)
-                    exp_vis.plotCurve(curve_var_dist, "var dist")
+    return sorted
+def saveRatios(iters, k_vals, sample_size, dimensions, ratios, filter_std, real_scaling=False):
+    base_value = 1
+    factors = [base_value] + list(base_value * ratios)
+    factors = np.round(factors, 4)
+    filtered_scales = doCheck(iters, k_vals, sample_size, dimensions, factors, filter_std, real_scaling)
+    print("filtered")
+    print(len(filtered_scales))
+    print(filtered_scales)
+    saving = True
+    if saving:
+        util.savePickle("../d64_factors.pkl", filtered_scales)
 
-                avg_ll_fake = np.mean(densities_real)
-                avg_ll_real = np.mean(densities_fake)
-                real_mean_vectors.append(avg_ll_real)
+def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
+    low_k = [i for i in range(1, low_boundary, step_low)]
+    high_k = [i for i in range(low_boundary, sample_size, step_high)]
+    #high_k = [50, 100, 500, 750, 999]
+    all_k = low_k + high_k
 
-    real_mean = np.mean(np.array(real_mean_vectors))
-    real_std = np.mean(np.std(real_mean_vectors))
-    print(real_mean, real_std)
+    return all_k
 
-def tryValues():
-    base_values = np.linspace(0.11, 0.05, 10)
-    print(base_values)
-    dimensions = [16]
+def checkCurves(sample_size, dimensions, real_scaling=False):
+    k_vals = getK(sample_size, low_boundary=100, step_low=5, step_high=50)
+    base_values = [1]
+    ratios = util.readPickle("../d64_factors.pkl")
+    for base_value in base_values:
+        for index, ratio in enumerate(ratios[1:]):
+            if index % 1 == 0:
+                scale = base_value*ratio
+                lambda_factors = [base_value, scale]
+                reference_distribution, scaled_distribution = getGaussian(sample_size, dimensions[0], lambda_factors)
+                if real_scaling:
+                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(scaled_distribution, reference_distribution)
+                    curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", scaled_distribution, reference_distribution, lambda_factors)
+                else:
+                    distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(reference_distribution, scaled_distribution)
+                    curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution, scaled_distribution, lambda_factors)
 
-    for value in base_values:
-        used_value = np.round(value, 4)
-        factors = [used_value * 1.1 ** (-i) for i in range(5)]
-        factors = np.round(factors, 4)
-        doCheck(dimensions, factors)
+                pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
 
+                plt.figure()
+                plt.title(f"Scale is {scale} with ratio {ratio}")
+                exp_vis.plotTheoreticalCurve(curve_classifier, curve_var_dist, lambda_factors, save=False)
+                exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
+                exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", "", save=False)
 
-# dimensions = [2]
-# factors = [1 * 2 ** (-i) for i in range(8)]
-# factors = np.round(factors, 2)
-# doCheck(dimensions, factors)
-
-
+iters = 1
+sample_size = 1000
+k_vals = [i for i in range(1, sample_size, 10)]
 dimensions = [2]
-factors = [1*2** (-i) for i in range(5)]
-factors = np.round(factors, 5)
-doCheck(dimensions, factors)
+real_scaling = True
+try_ratios = np.round(np.linspace(0.01, 1, 50), 4)
+filter_std = 0.1
+
+saveRatios(iters, k_vals, sample_size, dimensions, try_ratios, filter_std, real_scaling=real_scaling)
+checkCurves(sample_size, dimensions, real_scaling=real_scaling)
+
+# saveRatios(iters, k_vals, sample_size, dimensions, try_ratios, filter_std, real_scaling=False)
+# checkCurves(sample_size, dimensions, real_scaling=False)
 plt.show()
