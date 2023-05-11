@@ -71,7 +71,7 @@ def saveRatios(iters, k_vals, sample_size, dimensions, ratios, filter_std, real_
     print(filtered_scales)
     saving = True
     if saving:
-        util.savePickle("../d64_factors.pkl", filtered_scales)
+        util.savePickle("d64_factors.pkl", filtered_scales)
 
 def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
     low_k = [i for i in range(1, low_boundary, step_low)]
@@ -81,10 +81,10 @@ def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
 
     return all_k
 
-def checkCurves(sample_size, dimensions, real_scaling=False):
+def checkCurves(sample_size, dimensions, map_path, real_scaling=False):
     k_vals = getK(sample_size, low_boundary=100, step_low=5, step_high=50)
     base_values = [1]
-    ratios = util.readPickle("../d64_factors.pkl")
+    ratios = util.readPickle("d64_factors.pkl")
     for base_value in base_values:
         for index, ratio in enumerate(ratios[1:]):
             if index % 1 == 0:
@@ -101,22 +101,24 @@ def checkCurves(sample_size, dimensions, real_scaling=False):
                 pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
 
                 plt.figure()
+                save_path = f"{map_path}ratio{ratio}.png"
                 plt.title(f"Scale is {scale} with ratio {ratio}")
                 exp_vis.plotTheoreticalCurve(curve_classifier, curve_var_dist, lambda_factors, save=False)
                 exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
-                exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", "", save=False)
+                exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=True)
 
 iters = 1
 sample_size = 1000
 k_vals = [i for i in range(1, sample_size, 10)]
-dimensions = [2]
+dimensions = [64]
 real_scaling = True
 try_ratios = np.round(np.linspace(0.01, 1, 50), 4)
-filter_std = 0.1
-
+filter_std = 0.2
+map_path = f"./gaussian_dimension/present/d{dimensions[0]}_real/"
 saveRatios(iters, k_vals, sample_size, dimensions, try_ratios, filter_std, real_scaling=real_scaling)
-checkCurves(sample_size, dimensions, real_scaling=real_scaling)
+checkCurves(sample_size, dimensions, map_path, real_scaling=real_scaling)
+map_path = f"./gaussian_dimension/present/d{dimensions[0]}_fake/"
 
-# saveRatios(iters, k_vals, sample_size, dimensions, try_ratios, filter_std, real_scaling=False)
-# checkCurves(sample_size, dimensions, real_scaling=False)
+saveRatios(iters, k_vals, sample_size, dimensions, try_ratios, filter_std, real_scaling=False)
+checkCurves(sample_size, dimensions, map_path, real_scaling=False)
 plt.show()
