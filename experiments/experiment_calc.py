@@ -11,7 +11,8 @@ from sklearn.neighbors import KNeighborsClassifier
 # Theoretical with likelihood
 def getCurveVarDistance(distribution_name, real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
-    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name=distribution_name)
+    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors,
+                                                         method_name=distribution_name, norm=True)
     curve_pairs = []
     for scale in lambdas:
         density_real_scale = densities_real*scale
@@ -27,14 +28,15 @@ def getCurveVarDistance(distribution_name, real_data, fake_data, scale_factors):
 # Theoretical with likelihood
 def getCurveClassifier(distribution_name, real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
-    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors, method_name=distribution_name)
+    densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors,
+                                                         method_name=distribution_name, norm=False)
     curve_pairs = []
-    for value in lambdas:
-        predictions = (value*densities_real >= densities_fake).astype(int)
+    for scale in lambdas:
+        predictions = (densities_real*scale >= densities_fake).astype(int)
         truth_labels = np.concatenate([np.ones(real_data.shape[0]), np.zeros(fake_data.shape[0])])
         fpr, fnr = llc.getScores(truth_labels, predictions)
-        precision_class = value*fpr + fnr
-        recall_class = precision_class / value
+        precision_class = scale*fpr + fnr
+        recall_class = precision_class / scale
         curve_pairs.append([np.clip(precision_class,0,1), np.clip(recall_class,0,1)])
 
     return np.array(curve_pairs)
