@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from experiments import create_experiment as exp
+from experiments import experiment_calc as exp
 from experiments import  distributions as dist
 import matplotlib.pyplot as plt
 import visualize as plotting
@@ -15,10 +15,10 @@ def runExperiment(distance_dict, reference_distribution, scaled_distribution , k
     # Real distribution first argument
     if real_scaling:
         pr_pairs, dc_pairs = exp.getKNN(distance_dict["fake"], distance_dict["real"], distance_dict["real_fake"], k_vals)
-        curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", scaled_distribution, reference_distribution, [scale_factor, constant_factor])
+        curve_classifier = exp.getCurveClassifier("gaussian", scaled_distribution, reference_distribution, [scale_factor, constant_factor])
     else:
         pr_pairs, dc_pairs = exp.getKNN(distance_dict["real"], distance_dict["fake"], distance_dict["real_fake"], k_vals)
-        curve_classifier, curve_var_dist = exp.getGroundTruth("gaussian", reference_distribution, scaled_distribution, [constant_factor, scale_factor])
+        curve_classifier = exp.getCurveClassifier("gaussian", reference_distribution, scaled_distribution, [constant_factor, scale_factor])
 
     pr_aboves, pr_nearest_distances = exp.getStats(curve_var_dist, pr_pairs)
     dc_aboves, dc_nearest_distances = exp.getStats(curve_var_dist, dc_pairs)

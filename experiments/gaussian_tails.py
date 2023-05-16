@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from experiments import create_experiment as exp
+from experiments import experiment_calc as exp
 from scipy.spatial import distance
 import experiments.experiment_visualization as exp_vis
 

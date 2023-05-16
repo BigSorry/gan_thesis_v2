@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from experiments import create_experiment as exp
+from experiments import experiment_calc as exp
 from experiments import  distributions as dist
 import matplotlib.pyplot as plt
 import visualize as plotting
