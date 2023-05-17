@@ -8,22 +8,47 @@ import helper_functions as util
 import metrics.not_used.metrics as mtr
 from sklearn.neighbors import KNeighborsClassifier
 
+
+def getHist(real_density, fake_density):
+    lambdas = llc.getPRLambdas(angle_count=1000)
+    slopes_2d = np.expand_dims(lambdas, 1)
+    ref_dist_2d = np.expand_dims(real_density, 0)
+    eval_dist_2d = np.expand_dims(fake_density, 0)
+
+    # Compute precision and recall for all angles in one step via broadcasting
+    precision = np.minimum(ref_dist_2d * slopes_2d, eval_dist_2d).sum(axis=1)
+    recall = precision / lambdas
+    precision = np.clip(precision, 0, 1)
+    recall = np.clip(recall, 0, 1)
+    return precision, recall
 # Theoretical with likelihood
 def getCurveVarDistance(distribution_name, real_data, fake_data, scale_factors):
     lambdas = llc.getPRLambdas(angle_count=1000)
     densities_real, densities_fake = ll_est.getDensities(real_data, fake_data, scale_factors,
-                                                         method_name=distribution_name, norm=True)
+                                                         method_name=distribution_name, norm=False)
     curve_pairs = []
+    params = {"k_cluster":20, "angles":1001, "kmeans_runs":1}
+    pr_score, curve, cluster_labels = mtr.getHistoPR(real_data, fake_data, params)
+    prec, rec = getHist(densities_real, densities_fake)
+    curve_pr = np.array([prec, rec]).T
     for scale in lambdas:
         density_real_scale = densities_real*scale
         density_fake_scale = densities_fake*(1/scale)
-        densities_real_norm = density_real_scale / (np.sum(density_real_scale) )
-        densities_fake_norm = density_fake_scale / (np.sum(density_fake_scale) )
-        diff_prec = scale - np.sum(np.abs(densities_real_norm - densities_fake))
-        diif_recall = (1/scale) - np.sum(np.abs(densities_fake_norm - densities_real))
-        curve_pairs.append([np.clip(diff_prec,0,1), np.clip(diif_recall,0,1)])
+        diff_prec = scale - (np.sum(np.abs(density_real_scale - densities_fake)) / 2)
+        diff_recall = (1/scale)  - (np.sum(np.abs(density_fake_scale - densities_real)) / 2)
 
-    return np.array(curve_pairs)
+        test = np.sum(np.minimum(density_real_scale, densities_fake))
+        test2 = np.sum(np.minimum(densities_real, density_fake_scale))
+        test3 = test / scale
+
+
+        curve_pairs.append([np.clip(test, 0, 1), np.clip(test3,0,1)])
+
+    curve_pairs = np.array(curve_pairs)
+    diff = np.sum(prec - curve_pairs[:, 0])
+    diff2 = np.sum(rec - curve_pairs[:, 1])
+    print(diff, diff2)
+    return curve_pr
 
 # Theoretical with likelihood
 def getCurveClassifier(distribution_name, real_data, fake_data, scale_factors):
