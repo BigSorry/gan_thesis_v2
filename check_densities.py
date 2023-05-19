@@ -70,7 +70,8 @@ def saveRatios(iters, k_vals, sample_size, dimension, ratios, filter_std, real_s
     print(filtered_scales)
     saving = True
     if saving:
-        util.savePickle("d64_factors.pkl", filtered_scales)
+        save_path = f"d{dimension}_real_scaled_factors.pkl" if real_scaling else f"d{dimension}_fake_scaled_factors.pkl"
+        util.savePickle(save_path, filtered_scales)
 
 def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
     low_k = [i for i in range(1, low_boundary, step_low)]
@@ -119,7 +120,9 @@ def makeTable(calc_dict, map_path, real_scaling):
               colLabels=columns,
               loc='center')
     plt.tight_layout()
-    plt.show()
+    save_path = f"{map_path}table.png"
+    plt.savefig(save_path)
+    plt.close()
 
 def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
     for key, info_dict in calc_dict.items():
@@ -155,18 +158,19 @@ def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
             exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
             exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=True)
 
-def doCalcs(sample_size, dimensions, real_scaling=False):
+def doCalcs(sample_size, dimension, real_scaling=False):
     k_vals = getK(sample_size, low_boundary=100, step_low=5, step_high=50)
     k_vals = [i for i in range(1, sample_size)]
     base_value = 1
-    ratios = util.readPickle("d64_factors.pkl")
+    save_path = f"d{dimension}_real_scaled_factors.pkl" if real_scaling else f"d{dimension}_fake_scaled_factors.pkl"
+    ratios = util.readPickle(save_path)
     calc_dict = {}
     data_dict = {}
     for index, ratio in enumerate(ratios[1:]):
         if index % 1 == 0:
             scale = base_value*ratio
             lambda_factors = [base_value, scale]
-            reference_distribution, scaled_distribution = getGaussian(sample_size, dimensions, lambda_factors)
+            reference_distribution, scaled_distribution = getGaussian(sample_size, dimension, lambda_factors)
             if real_scaling:
                 lambda_factors = [scale, base_value]
                 distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(scaled_distribution, reference_distribution)
@@ -197,11 +201,11 @@ def doCalcs(sample_size, dimensions, real_scaling=False):
     return calc_dict, data_dict
 
 def runExperiment(real_scaling):
-    iters = 1
+    iters = 10
     sample_size = 1000
     k_vals = [i for i in range(1, sample_size, 10)]
     k_vals = [1, sample_size-1]
-    dimension = 64
+    dimension = 2
     ratios = 20
     try_ratios = np.round(np.linspace(0.01, .99, ratios), 4)
     filter_std = 0.1
