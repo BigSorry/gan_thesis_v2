@@ -80,19 +80,62 @@ def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
 
     return all_k
 
-def getTable():
-    return
-
-def plotCurve(results_dict, dimension, map_path, real_scaling):
-    for key, info_dict in results_dict.items():
+def makeTable(calc_dict, map_path, real_scaling):
+    row_labels = []
+    cell_data = []
+    columns = ["pr_distance_min", "pr_distance_mean", "pr_distance_max",
+               "dc_distance",  "dc_distance_mean", "pr_distance_max"]
+    colors = []
+    for key, info_dict in calc_dict.items():
         lambda_factors = list(key)
-        scale_ratio = lambda_factors[0] if real_scaling else lambda_factors[1]
-        k_vals = info_dict["k_vals"]
+        scale_ratio = np.round(lambda_factors[0] if real_scaling else lambda_factors[1] , 3)
+        row_label = f"\u03BB_r={scale_ratio}" if real_scaling else f"\u03BB_f={scale_ratio}"
         pr_pairs = info_dict["pr_pairs"]
         dc_pairs = info_dict["dc_pairs"]
+        pr_nearest_distances = info_dict["pr_distances"]
+        dc_nearest_distances = info_dict["dc_distances"]
+        row_data = np.round(np.array([pr_nearest_distances.min(), pr_nearest_distances.mean(), pr_nearest_distances.max(),
+                    dc_nearest_distances.min(), dc_nearest_distances.mean(), dc_nearest_distances.max()]), 2)
+        row_colors = []
+        for val in row_data:
+            if val < 0.1:
+                color = "green"
+            elif val >= 0.5:
+                color = "red"
+            else:
+                color = "yellow"
+            row_colors.append(color)
+        colors.append(row_colors)
+        row_labels.append(row_label)
+        cell_data.append(row_data)
+
+
+    plt.figure(figsize=(8,8))
+    plt.axis('tight')
+    plt.axis('off')
+    plt.table(cellText=cell_data,
+              rowLabels=row_labels,
+              cellColours=colors,
+              colLabels=columns,
+              loc='center')
+    plt.tight_layout()
+    plt.show()
+
+def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
+    for key, info_dict in calc_dict.items():
+        lambda_factors = list(key)
+        scale_ratio = lambda_factors[0] if real_scaling else lambda_factors[1]
+        k_vals = np.array(info_dict["k_vals"])
+        max_index = k_vals.shape[0]-1
+        k_selected_indices = [0, max_index // 4, max_index // 2, max_index]
+        k_vals = k_vals[k_selected_indices]
+        pr_pairs = info_dict["pr_pairs"]
+        pr_pairs = pr_pairs[k_selected_indices, :]
+        dc_pairs = info_dict["dc_pairs"]
+        dc_pairs = dc_pairs[k_selected_indices, :]
         curve_classifier = info_dict["curve_classifier"]
-        reference_distribution = info_dict["reference_distribution"]
-        scaled_distribution = info_dict["scaled_distribution"]
+        reference_distribution = data_dict[key]["reference_distribution"]
+        scaled_distribution = data_dict[key]["scaled_distribution"]
         plt.figure()
         save_path = f"{map_path}ratio{scale_ratio}.png"
         if dimension == 2:
@@ -114,9 +157,11 @@ def plotCurve(results_dict, dimension, map_path, real_scaling):
 
 def doCalcs(sample_size, dimensions, real_scaling=False):
     k_vals = getK(sample_size, low_boundary=100, step_low=5, step_high=50)
+    k_vals = [i for i in range(1, sample_size)]
     base_value = 1
     ratios = util.readPickle("d64_factors.pkl")
-    results = {}
+    calc_dict = {}
+    data_dict = {}
     for index, ratio in enumerate(ratios[1:]):
         if index % 1 == 0:
             scale = base_value*ratio
@@ -133,34 +178,42 @@ def doCalcs(sample_size, dimensions, real_scaling=False):
                 #curve_var_dist = exp.getCurveVarDistance("gaussian", reference_distribution, scaled_distribution, lambda_factors)
 
             pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
-            lambda_factors = (lambda_factors[0], lambda_factors[1])
-            results[lambda_factors] = {}
-            results[lambda_factors]["k_vals"] = k_vals
-            results[lambda_factors]["pr_pairs"] = pr_pairs
-            results[lambda_factors]["dc_pairs"] = dc_pairs
-            results[lambda_factors]["curve_classifier"] = curve_classifier
-            results[lambda_factors]["reference_distribution"] = reference_distribution
-            results[lambda_factors]["scaled_distribution"] = scaled_distribution
+            pr_aboves, pr_nearest_distances = exp.getStats(curve_classifier, pr_pairs)
+            dc_aboves, dc_nearest_distances = exp.getStats(curve_classifier, dc_pairs)
 
-    return results
+            lambda_factors = (lambda_factors[0], lambda_factors[1])
+            calc_dict[lambda_factors] = {}
+            calc_dict[lambda_factors]["k_vals"] = k_vals
+            calc_dict[lambda_factors]["pr_pairs"] = pr_pairs
+            calc_dict[lambda_factors]["pr_distances"] = pr_nearest_distances
+            calc_dict[lambda_factors]["dc_pairs"] = dc_pairs
+            calc_dict[lambda_factors]["dc_distances"] = dc_nearest_distances
+            calc_dict[lambda_factors]["curve_classifier"] = curve_classifier
+
+            data_dict[lambda_factors] = {}
+            data_dict[lambda_factors]["reference_distribution"] = reference_distribution
+            data_dict[lambda_factors]["scaled_distribution"] = scaled_distribution
+
+    return calc_dict, data_dict
 
 def runExperiment(real_scaling):
     iters = 1
     sample_size = 1000
     k_vals = [i for i in range(1, sample_size, 10)]
     k_vals = [1, sample_size-1]
-    dimension = 2
-    ratios = 10
+    dimension = 64
+    ratios = 20
     try_ratios = np.round(np.linspace(0.01, .99, ratios), 4)
-    filter_std = 0.2
+    filter_std = 0.1
     if real_scaling:
         map_path = f"./gaussian_dimension/paper_img/d{dimension}_real/"
     else:
         map_path = f"./gaussian_dimension/paper_img/d{dimension}_fake/"
 
     saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
-    results_dict = doCalcs(sample_size, dimension, real_scaling=real_scaling)
-    plotCurve(results_dict, dimension, map_path, real_scaling=real_scaling)
+    calc_dict, data_dict = doCalcs(sample_size, dimension, real_scaling=real_scaling)
+    #plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
+    makeTable(calc_dict, map_path, real_scaling)
 
 runExperiment(real_scaling=True)
 runExperiment(real_scaling=False)
