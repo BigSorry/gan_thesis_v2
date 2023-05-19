@@ -81,48 +81,62 @@ def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
 
     return all_k
 
-def makeTable(calc_dict, map_path, real_scaling):
-    row_labels = []
-    cell_data = []
-    columns = ["pr_distance_min", "pr_distance_mean", "pr_distance_max",
-               "dc_distance",  "dc_distance_mean", "pr_distance_max"]
-    colors = []
-    for key, info_dict in calc_dict.items():
-        lambda_factors = list(key)
-        scale_ratio = np.round(lambda_factors[0] if real_scaling else lambda_factors[1] , 3)
-        row_label = f"\u03BB_r={scale_ratio}" if real_scaling else f"\u03BB_f={scale_ratio}"
-        pr_pairs = info_dict["pr_pairs"]
-        dc_pairs = info_dict["dc_pairs"]
-        pr_nearest_distances = info_dict["pr_distances"]
-        dc_nearest_distances = info_dict["dc_distances"]
-        row_data = np.round(np.array([pr_nearest_distances.min(), pr_nearest_distances.mean(), pr_nearest_distances.max(),
-                    dc_nearest_distances.min(), dc_nearest_distances.mean(), dc_nearest_distances.max()]), 2)
-        row_colors = []
-        for val in row_data:
-            if val < 0.1:
-                color = "green"
-            elif val >= 0.5:
-                color = "red"
-            else:
-                color = "yellow"
-            row_colors.append(color)
-        colors.append(row_colors)
-        row_labels.append(row_label)
-        cell_data.append(row_data)
+def getrowColors(row_data):
+    row_colors = []
+    for val in row_data:
+        if val < 0.1:
+            color = "green"
+        elif val >= 0.5:
+            color = "red"
+        else:
+            color = "yellow"
+        row_colors.append(color)
 
+    return row_colors
 
-    plt.figure(figsize=(8,8))
+def plotTable(metric_name, cell_data, row_labels, column_labels, colors, map_path):
+    plt.figure(figsize=(8, 8))
     plt.axis('tight')
     plt.axis('off')
     plt.table(cellText=cell_data,
               rowLabels=row_labels,
               cellColours=colors,
-              colLabels=columns,
+              colLabels=column_labels,
               loc='center')
     plt.tight_layout()
-    save_path = f"{map_path}table.png"
+    save_path = f"{map_path}{metric_name}_table.png"
     plt.savefig(save_path)
     plt.close()
+def makeTable(calc_dict, map_path, real_scaling):
+    row_labels = []
+    pr_data = []
+    dc_data = []
+    columns = ["distance_min", "distance_mean", "distance_max"]
+    pr_colors = []
+    dc_colors = []
+    for key, info_dict in calc_dict.items():
+        lambda_factors = list(key)
+        scale_ratio = np.round(lambda_factors[0] if real_scaling else lambda_factors[1], 2)
+        row_label = f"\u03BB_r={scale_ratio}" if real_scaling else f"\u03BB_f={scale_ratio}"
+        pr_pairs = info_dict["pr_pairs"]
+        dc_pairs = info_dict["dc_pairs"]
+        pr_nearest_distances = info_dict["pr_distances"]
+        dc_nearest_distances = info_dict["dc_distances"]
+        pr_row = np.round(np.array([pr_nearest_distances.min(), pr_nearest_distances.mean(), pr_nearest_distances.max()]), 2)
+        dc_row = np.round(np.array([dc_nearest_distances.min(), dc_nearest_distances.mean(), dc_nearest_distances.max()]), 2)
+        pr_row_colors = getrowColors(pr_row)
+        dc_row_colors = getrowColors(dc_row)
+
+        pr_colors.append(pr_row_colors)
+        dc_colors.append(dc_row_colors)
+        row_labels.append(row_label)
+        pr_data.append(pr_row)
+        dc_data.append(dc_row)
+
+    plotTable("pr", pr_data, row_labels, columns, pr_colors, map_path)
+    plotTable("dc", dc_data, row_labels, columns, dc_colors, map_path)
+
+
 
 def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
     for key, info_dict in calc_dict.items():
@@ -200,13 +214,13 @@ def doCalcs(sample_size, dimension, real_scaling=False):
 
     return calc_dict, data_dict
 
-def runExperiment(real_scaling):
-    iters = 10
+def runExperiment(dimension, real_scaling):
+    iters = 1
     sample_size = 1000
     k_vals = [i for i in range(1, sample_size, 10)]
     k_vals = [1, sample_size-1]
-    dimension = 2
-    ratios = 20
+
+    ratios = 10
     try_ratios = np.round(np.linspace(0.01, .99, ratios), 4)
     filter_std = 0.1
     if real_scaling:
@@ -216,8 +230,12 @@ def runExperiment(real_scaling):
 
     saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
     calc_dict, data_dict = doCalcs(sample_size, dimension, real_scaling=real_scaling)
-    #plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
+    plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
     makeTable(calc_dict, map_path, real_scaling)
 
-runExperiment(real_scaling=True)
-runExperiment(real_scaling=False)
+dimension = 2
+runExperiment(dimension, real_scaling=True)
+runExperiment(dimension, real_scaling=False)
+dimension = 64
+runExperiment(dimension, real_scaling=True)
+runExperiment(dimension, real_scaling=False)
