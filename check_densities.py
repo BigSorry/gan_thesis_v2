@@ -5,6 +5,7 @@ from experiments import experiment_calc as exp
 import experiments.experiment_visualization as exp_vis
 from sklearn import metrics
 import helper_functions as util
+import matplotlib.transforms
 
 # Assume real and fake prior is equal
 def multiGaus(real_data, fake_data, dimension, scale_params):
@@ -95,17 +96,29 @@ def getrowColors(row_data):
     return row_colors
 
 def plotTable(metric_name, cell_data, row_labels, column_labels, colors, map_path):
-    plt.figure(figsize=(8, 8))
-    plt.axis('tight')
-    plt.axis('off')
-    plt.table(cellText=cell_data,
+    plt.figure(figsize=(6, 12))
+    table = plt.table(cellText=cell_data,
               rowLabels=row_labels,
               cellColours=colors,
               colLabels=column_labels,
               loc='center')
-    plt.tight_layout()
-    save_path = f"{map_path}{metric_name}_table.png"
-    plt.savefig(save_path)
+
+
+    plt.axis('off')
+    plt.axis('off')
+    # prepare for saving:
+    # draw canvas once
+    plt.gcf().canvas.draw()
+    # get bounding box of table
+    points = table.get_window_extent(plt.gcf()._cachedRenderer).get_points()
+    # add 10 pixel spacing
+    points[0, :] -= 10
+    points[1, :] += 10
+    # get new bounding box in inches
+    nbbox = matplotlib.transforms.Bbox.from_extents(points / plt.gcf().dpi)
+    # save and clip by new bounding box
+    save_path = f"{map_path}{metric_name}_table_d{dimension}.png"
+    plt.savefig(save_path, bbox_inches=nbbox)
     plt.close()
 def makeTable(calc_dict, map_path, real_scaling):
     row_labels = []
@@ -228,14 +241,19 @@ def runExperiment(dimension, real_scaling):
     else:
         map_path = f"./gaussian_dimension/paper_img/d{dimension}_fake/"
 
-    saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
+    #saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
     calc_dict, data_dict = doCalcs(sample_size, dimension, real_scaling=real_scaling)
-    plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
+    #plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
     makeTable(calc_dict, map_path, real_scaling)
 
 dimension = 2
 runExperiment(dimension, real_scaling=True)
 runExperiment(dimension, real_scaling=False)
-dimension = 64
-runExperiment(dimension, real_scaling=True)
-runExperiment(dimension, real_scaling=False)
+
+
+# dimension = 64
+# runExperiment(dimension, real_scaling=True)
+# runExperiment(dimension, real_scaling=False)
+# dimension = 1000
+# runExperiment(dimension, real_scaling=True)
+# runExperiment(dimension, real_scaling=False)
