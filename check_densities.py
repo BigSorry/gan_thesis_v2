@@ -71,7 +71,7 @@ def saveRatios(iters, k_vals, sample_size, dimension, ratios, filter_std, real_s
     print(filtered_scales)
     saving = True
     if saving:
-        save_path = f"d{dimension}_real_scaled_factors.pkl" if real_scaling else f"d{dimension}_fake_scaled_factors.pkl"
+        save_path = f"./factors/d{dimension}_real_scaled_factors.pkl" if real_scaling else f"./factors/d{dimension}_fake_scaled_factors.pkl"
         util.savePickle(save_path, filtered_scales)
 
 def getK(sample_size, low_boundary=10, step_low=2, step_high=50):
@@ -95,7 +95,7 @@ def getrowColors(row_data):
 
     return row_colors
 
-def plotTable(metric_name, cell_data, row_labels, column_labels, colors, map_path):
+def plotTable(dimension, metric_name, cell_data, row_labels, column_labels, colors, map_path):
     plt.figure(figsize=(6, 12))
     table = plt.table(cellText=cell_data,
               rowLabels=row_labels,
@@ -120,7 +120,7 @@ def plotTable(metric_name, cell_data, row_labels, column_labels, colors, map_pat
     save_path = f"{map_path}{metric_name}_table_d{dimension}.png"
     plt.savefig(save_path, bbox_inches=nbbox)
     plt.close()
-def makeTable(calc_dict, map_path, real_scaling):
+def makeTable(dimension, calc_dict, map_path, real_scaling):
     row_labels = []
     pr_data = []
     dc_data = []
@@ -146,8 +146,8 @@ def makeTable(calc_dict, map_path, real_scaling):
         pr_data.append(pr_row)
         dc_data.append(dc_row)
 
-    plotTable("pr", pr_data, row_labels, columns, pr_colors, map_path)
-    plotTable("dc", dc_data, row_labels, columns, dc_colors, map_path)
+    plotTable(dimension, "pr", pr_data, row_labels, columns, pr_colors, map_path)
+    plotTable(dimension, "dc", dc_data, row_labels, columns, dc_colors, map_path)
 
 
 
@@ -185,12 +185,11 @@ def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
             exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
             exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=True)
 
-def doCalcs(sample_size, dimension, real_scaling=False):
+
+def doCalcs(sample_size, dimension, ratios, real_scaling=False):
     k_vals = getK(sample_size, low_boundary=100, step_low=5, step_high=50)
     k_vals = [i for i in range(1, sample_size)]
     base_value = 1
-    save_path = f"d{dimension}_real_scaled_factors.pkl" if real_scaling else f"d{dimension}_fake_scaled_factors.pkl"
-    ratios = util.readPickle(save_path)
     calc_dict = {}
     data_dict = {}
     for index, ratio in enumerate(ratios[1:]):
@@ -222,38 +221,7 @@ def doCalcs(sample_size, dimension, real_scaling=False):
             calc_dict[lambda_factors]["curve_classifier"] = curve_classifier
 
             data_dict[lambda_factors] = {}
-            data_dict[lambda_factors]["reference_distribution"] = reference_distribution
-            data_dict[lambda_factors]["scaled_distribution"] = scaled_distribution
+            # data_dict[lambda_factors]["reference_distribution"] = reference_distribution
+            # data_dict[lambda_factors]["scaled_distribution"] = scaled_distribution
 
     return calc_dict, data_dict
-
-def runExperiment(dimension, real_scaling):
-    iters = 1
-    sample_size = 1000
-    k_vals = [i for i in range(1, sample_size, 10)]
-    k_vals = [1, sample_size-1]
-
-    ratios = 10
-    try_ratios = np.round(np.linspace(0.01, .99, ratios), 4)
-    filter_std = 0.1
-    if real_scaling:
-        map_path = f"./gaussian_dimension/paper_img/d{dimension}_real/"
-    else:
-        map_path = f"./gaussian_dimension/paper_img/d{dimension}_fake/"
-
-    #saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
-    calc_dict, data_dict = doCalcs(sample_size, dimension, real_scaling=real_scaling)
-    #plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
-    makeTable(calc_dict, map_path, real_scaling)
-
-dimension = 2
-runExperiment(dimension, real_scaling=True)
-runExperiment(dimension, real_scaling=False)
-
-
-# dimension = 64
-# runExperiment(dimension, real_scaling=True)
-# runExperiment(dimension, real_scaling=False)
-# dimension = 1000
-# runExperiment(dimension, real_scaling=True)
-# runExperiment(dimension, real_scaling=False)
