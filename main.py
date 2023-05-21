@@ -7,28 +7,19 @@ import gaussian_combine as gauss_combine
 def runCombine(dimension, real_scaling):
     iters = 1
     sample_size = 1000
-    k_vals = [i for i in range(1, sample_size, 10)]
-    k_vals = [1, sample_size - 1]
-
-    ratios = 2
-    try_ratios = np.round(np.linspace(0.01, .99, ratios), 4)
-    filter_std = 0.1
     if real_scaling:
         map_path = f"./gaussian_combine/paper_img/d{dimension}_real/"
     else:
         map_path = f"./gaussian_combine/paper_img/d{dimension}_fake/"
 
+    take_ratios = 5
+    ratios = np.round(np.linspace(0.01, .99, take_ratios), 4)
     ratios_path = f"./factors/d{dimension}_real_scaled_factors.pkl" if real_scaling \
         else f"./factors/d{dimension}_fake_scaled_factors.pkl"
-    ratios = util.readPickle(ratios_path)
-    calc_dict, _ = ch_den.doCalcs(sample_size, dimension, ratios, real_scaling=real_scaling)
-    pr_row, dc_row = gauss_combine.combineResults(calc_dict)
-    column_labels = ["distance_min", "distance_mean", "distance_max"]
-    row_labels = ["All lambdas combined"]
-    pr_colors = ch_den.getrowColors(pr_row)
-    dc_colors = ch_den.getrowColors(dc_row)
-    ch_den.plotTable(dimension, "pr", [pr_row], row_labels, column_labels, [pr_colors], map_path)
-    ch_den.plotTable(dimension, "dc", [dc_row], row_labels, column_labels, [dc_colors], map_path)
+    #ratios = util.readPickle(ratios_path)
+    pr_calc, dc_calc = gauss_combine.doCalcs(sample_size, dimension, ratios, real_scaling=real_scaling)
+    gauss_combine.saveBoxplot(pr_calc, "pr", map_path)
+    gauss_combine.saveBoxplot(dc_calc, "dc", map_path)
 
 
 def runGaussian(dimension, real_scaling):
