@@ -37,7 +37,8 @@ def saveBoxplot(score_results, metric_name, map_path):
     stds = np.std(score_results, axis=1)
 
     plt.figure(figsize=(14, 6))
-    plt.errorbar(k_vals, means, stds, linestyle='None', marker='o')
+    plt.boxplot(score_results.T)
+    #plt.errorbar(k_vals, means, stds, linestyle='None', marker='o')
     plt.ylim([0, 1.1])
     plt.xlabel("K-value")
     save_path = f"{map_path}/{metric_name}.png"

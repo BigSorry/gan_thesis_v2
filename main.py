@@ -40,25 +40,32 @@ def runGaussian(dimension, real_scaling):
     ratios_path = f"./factors/d{dimension}_real_scaled_factors.pkl" if real_scaling \
         else f"./factors/d{dimension}_fake_scaled_factors.pkl"
     ratios = util.readPickle(ratios_path)
-    calc_dict, data_dict = ch_den.doCalcs(sample_size, dimension, ratios, real_scaling=real_scaling)
-    # plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
-    ch_den. makeTable(dimension, calc_dict, map_path, real_scaling)
+
+    pr_calc, dc_calc = ch_den.calcBestK(sample_size, dimension, ratios, real_scaling)
+    ch_den.saveBoxplot(pr_calc, "pr", map_path)
+    ch_den.saveBoxplot(dc_calc, "dc", map_path)
+    # calc_dict, data_dict = ch_den.doCalcs(sample_size, dimension, ratios, real_scaling=real_scaling)
+    # ch_den.plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
+    # ch_den.makeTable(dimension, calc_dict, map_path, real_scaling)
 
 
-run_combine = True
+run_combine = False
 dimension = 2
 if run_combine:
     runCombine(dimension, real_scaling=True)
     runCombine(dimension, real_scaling=False)
-    dimension = 64
-    runCombine(dimension, real_scaling=True)
-    runCombine(dimension, real_scaling=False)
+    # dimension = 64
+    # runCombine(dimension, real_scaling=True)
+    # runCombine(dimension, real_scaling=False)
+    # dimension = 1000
+    # runCombine(dimension, real_scaling=True)
+    # runCombine(dimension, real_scaling=False)
 else:
     runGaussian(dimension, real_scaling=True)
     runGaussian(dimension, real_scaling=False)
-    dimension = 64
-    runGaussian(dimension, real_scaling=True)
-    runGaussian(dimension, real_scaling=False)
+    # dimension = 64
+    # runGaussian(dimension, real_scaling=True)
+    # runGaussian(dimension, real_scaling=False)
     # dimension = 1000
-    # runExperiment(dimension, real_scaling=True)
-    # runExperiment(dimension, real_scaling=False)
+    # runGaussian(dimension, real_scaling=True)
+    # runGaussian(dimension, real_scaling=False)
