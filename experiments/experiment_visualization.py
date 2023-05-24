@@ -30,9 +30,9 @@ def plotKNNMetrics(score_pair,  k_values, label_name, color, save_path, save=Tru
     for index, text in enumerate(annotate_text):
         coords = (score_pair[index, 1], score_pair[index, 0])
         specialAnnotate(text, coords, fontsize=14)
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
+               fancybox=True, shadow=True, ncol=2, fontsize=9)
     if save:
-        plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
-                   fancybox=True, shadow=True, ncol=2, fontsize=9)
         plt.savefig(save_path)
         plt.close()
 
