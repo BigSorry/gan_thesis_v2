@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from experiments import experiment_calc as exp
 import experiments.experiment_visualization as exp_vis
-from sklearn import metrics
 import helper_functions as util
 import matplotlib.transforms
+from scipy import integrate
 
 # Assume real and fake prior is equal
 def multiGaus(real_data, fake_data, dimension, scale_params):
@@ -102,8 +102,6 @@ def plotTable(dimension, metric_name, cell_data, row_labels, column_labels, colo
               cellColours=colors,
               colLabels=column_labels,
               loc='center')
-
-
     plt.axis('off')
     plt.axis('off')
     # prepare for saving:
@@ -133,16 +131,42 @@ def makeTable(metric_name, dimension, calc_dict, map_path, real_scaling):
         distances = np.array(distance_list)
         row_values = np.round(np.array([distances.min(), distances.mean(), distances.max()]), 2)
         pr_row_colors = getrowColors(row_values)
-
         cell_colors.append(pr_row_colors)
         row_labels.append(row_label)
         table_data.append(row_values)
 
     plotTable(dimension, metric_name, table_data, row_labels, columns, cell_colors, map_path)
 
+def getCurveData(iters, k_vals, sample_size, dimension, ratios, real_scaling=False):
+    base_value = 1
+    data_dict = {}
+    info_dict = {}
+    for iter in range(iters):
+        for index, ratio in enumerate(ratios):
+            scale = base_value*ratio
+            lambda_factors = [base_value, scale]
+            reference_distribution, scaled_distribution = getGaussian(sample_size, dimension, lambda_factors)
+            if real_scaling:
+                lambda_factors = [scale, base_value]
+                distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(scaled_distribution, reference_distribution)
+                curve_classifier = exp.getCurveClassifier("gaussian", scaled_distribution, reference_distribution, lambda_factors)
+            else:
+                distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(reference_distribution, scaled_distribution)
+                curve_classifier = exp.getCurveClassifier("gaussian", reference_distribution, scaled_distribution, lambda_factors)
 
+            pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
 
-def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
+            lambda_factors = (lambda_factors[0], lambda_factors[1])
+            if lambda_factors not in info_dict:
+                info_dict[lambda_factors] = {}
+            info_dict[lambda_factors]["pr_pairs"] = pr_pairs
+            info_dict[lambda_factors]["dc_pairs"] = dc_pairs
+            info_dict[lambda_factors]["curve_classifier"] = curve_classifier
+            info_dict[lambda_factors]["k_vals"] = k_vals
+            info_dict[lambda_factors]["dimension"] = dimension
+    return info_dict, data_dict
+
+def plotCurve(calc_dict, map_path, real_scaling):
     for key, info_dict in calc_dict.items():
         lambda_factors = list(key)
         scale_ratio = lambda_factors[0] if real_scaling else lambda_factors[1]
@@ -156,26 +180,14 @@ def plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling):
         dc_pairs = info_dict["dc_pairs"]
         dc_pairs = dc_pairs[k_selected_indices, :]
         curve_classifier = info_dict["curve_classifier"]
-        reference_distribution = data_dict[key]["reference_distribution"]
-        scaled_distribution = data_dict[key]["scaled_distribution"]
+        dimension = info_dict["dimension"]
+
         plt.figure()
-        save_path = f"{map_path}ratio{scale_ratio}.png"
-        if dimension == 2:
-            plt.subplot(1, 2, 1)
-            plt.title(f"Scale ratio is {scale_ratio}")
-            exp_vis.plotTheoreticalCurve(curve_classifier, curve_classifier, lambda_factors, save=False)
-            exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
-            exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=False)
-            plt.subplot(1, 2, 2)
-            if real_scaling:
-                exp_vis.plotDistributions(scaled_distribution, reference_distribution, 1, -1, "", save_path, save=True)
-            else:
-                exp_vis.plotDistributions(reference_distribution, scaled_distribution, -1, 1, "", save_path, save=True)
-        else:
-            plt.title(f"Scale ratio is  {scale_ratio}")
-            exp_vis.plotTheoreticalCurve(curve_classifier, curve_classifier, lambda_factors, save=False)
-            exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
-            exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=True)
+        save_path = f"{map_path}ratio{scale_ratio}_d{dimension}.png"
+        plt.title(f"Scale ratio is  {scale_ratio}")
+        exp_vis.plotTheoreticalCurve(curve_classifier, curve_classifier, lambda_factors, save=False)
+        exp_vis.plotKNNMetrics(pr_pairs, k_vals, "PR_KNN", "black", "", save=False)
+        exp_vis.plotKNNMetrics(dc_pairs, k_vals, "DC_KNN", "yellow", save_path, save=True)
 
 
 def doCalcs(iters, k_vals, sample_size, dimension, ratios, real_scaling=False):
@@ -204,21 +216,9 @@ def doCalcs(iters, k_vals, sample_size, dimension, ratios, real_scaling=False):
             if lambda_factors not in pr_results:
                 pr_results[lambda_factors] = list(pr_nearest_distances)
                 dc_results[lambda_factors] = list(dc_nearest_distances)
-                # dc_results[lambda_factors].extend(dc_nearest_distances)
-                # calc_dict[lambda_factors]["k_vals"] = k_vals
-                # calc_dict[lambda_factors]["pr_pairs"] = pr_pairs
-                # calc_dict[lambda_factors]["pr_distances"] = pr_nearest_distances
-                # calc_dict[lambda_factors]["dc_pairs"] = dc_pairs
-                # calc_dict[lambda_factors]["dc_distances"] = dc_nearest_distances
-                # calc_dict[lambda_factors]["curve_classifier"] = curve_classifier
             else:
                 pr_results[lambda_factors].extend(list(pr_nearest_distances))
                 dc_results[lambda_factors].extend(list(dc_nearest_distances))
-
-            if dimension == 2:
-                data_dict[lambda_factors] = {}
-                data_dict[lambda_factors]["reference_distribution"] = reference_distribution
-                data_dict[lambda_factors]["scaled_distribution"] = scaled_distribution
 
     return pr_results, dc_results, data_dict
 
@@ -226,7 +226,7 @@ def getNearestDistances(iters, k_vals, sample_size, dimension, ratios, real_scal
     base_value = 1
     pr_results = {k:[] for k in k_vals}
     dc_results = {k:[] for k in k_vals}
-
+    auc_scores = []
     for iter in range(iters):
         for index, ratio in enumerate(ratios):
             scale = base_value*ratio
@@ -240,6 +240,9 @@ def getNearestDistances(iters, k_vals, sample_size, dimension, ratios, real_scal
                 distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(reference_distribution, scaled_distribution)
                 curve_classifier = exp.getCurveClassifier("gaussian", reference_distribution, scaled_distribution, lambda_factors)
 
+            #curve_classifier = np.array([[1,1], [1,1]])
+            auc = integrate.trapz(np.round(curve_classifier[:, 1], 2), np.round(curve_classifier[:, 0], 2))
+            auc_scores.append(auc)
             pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
             pr_aboves, pr_nearest_distances = exp.getStats(curve_classifier, pr_pairs)
             dc_aboves, dc_nearest_distances = exp.getStats(curve_classifier, dc_pairs)
@@ -248,29 +251,34 @@ def getNearestDistances(iters, k_vals, sample_size, dimension, ratios, real_scal
                 pr_results[k_val].append(pr_nearest_distances[index])
                 dc_results[k_val].append(dc_nearest_distances[index])
 
+    return pr_results, dc_results, auc_scores
 
-    return pr_results, dc_results
 
-def saveBoxplot(score_dict, k_vals, metric_name, map_path):
-    mean_vecs = []
-    stds_vecs = []
-    for k_val, distance_scores in score_dict.items():
-        mean_vec = np.median(distance_scores)
-        stds_vec = np.std(distance_scores)
-        mean_vecs.append(mean_vec)
-        stds_vecs.append(stds_vec)
+def combineK(result_dict, dividing_factor=10):
+    new_results = {}
+    for k_val, distances in result_dict.items():
+        group_nr = (k_val // dividing_factor)
+        if group_nr not in new_results:
+            new_results[group_nr] = list(distances)
+        else:
+            new_results[group_nr].extend(list(distances))
 
-    take_top = 10
-    mean_vecs = np.array(mean_vecs)
-    select_indices = np.argsort(mean_vecs)
-    taken_samples = np.array(list(score_dict.values()))[select_indices, :]
-    taken_k = k_vals[select_indices]
+    return new_results
+
+
+def saveBoxplot(distances, k_vals, save_path):
+    mean_vecs = distances.mean(axis=1)
     plt.figure(figsize=(14, 6))
-    plt.boxplot(taken_samples.T)
-    #plt.errorbar(taken_k, taken_means, taken_stds, linestyle='None', marker='o')
+    plt.boxplot(distances.T, positions=k_vals)
+    plt.plot(k_vals, mean_vecs)
     plt.ylim([0, 1.1])
     plt.xlabel("K-value")
-    plt.xticks(np.arange(select_indices.shape[0])+1, taken_k)
-    save_path = f"{map_path}/{metric_name}.png"
+    plt.xscale("log")
+    plt.xticks(rotation=90)
+    #plt.xticks(np.arange(select_indices.shape[0])+1, taken_k)
     plt.savefig(save_path, bbox_inches='tight')
     plt.close()
+
+
+
+

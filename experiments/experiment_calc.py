@@ -109,9 +109,8 @@ def getStats(curve, metric_points):
         distances = point - curve
         l1_distances = np.sum(np.abs(distances), axis=1)
         l1_distances_sorted = np.sort(l1_distances)
-        nearest_l1_distance  = l1_distances_sorted[: 1].mean()
+        nearest_l1_distance = l1_distances_sorted[0]
         nearest_distance.append(nearest_l1_distance)
-
         row_check = (distances[:, 0] >= 0) & (distances[:, 1] >= 0)
         above_true = np.sum(row_check) > 0
         points_above.append(above_true)

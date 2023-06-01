@@ -1,93 +1,83 @@
 import numpy as np
 import helper_functions as util
 import check_densities as ch_den
-import gaussian_combine as gauss_combine
+from pathlib import Path
+from datetime import datetime
+import sys
 
-
-# filter_std = 0.1
-# ch_den.saveRatios(iters, k_vals, sample_size, dimension, try_ratios, filter_std, real_scaling=real_scaling)
-# ratios_path = f"./factors/d{dimension}_real_scaled_factors.pkl" if real_scaling \
-#     else f"./factors/d{dimension}_fake_scaled_factors.pkl"
-# ratios = util.readPickle(ratios_path)
-
-def runCombine(dimension, real_scaling):
+def makeCurves(dimensions, real_scaling):
     iters = 1
     sample_size = 1000
-    if real_scaling:
-        map_path = f"./gaussian_combine/paper_img/d{dimension}_real/"
-    else:
-        map_path = f"./gaussian_combine/paper_img/d{dimension}_fake/"
+    k_vals = [i for i in range(1, sample_size, 1)]
+    ratios_taken = 10
+    ratios = np.round(np.linspace(.1, 1, ratios_taken), 4)
 
-    take_ratios = 5
-    ratios = np.round(np.linspace(0.01, .99, take_ratios), 4)
-    ratios_path = f"./factors/d{dimension}_real_scaled_factors.pkl" if real_scaling \
-        else f"./factors/d{dimension}_fake_scaled_factors.pkl"
-    #ratios = util.readPickle(ratios_path)
-    pr_results, dc_results, data_dict = gauss_combine.doCalcs(sample_size, dimension, ratios, real_scaling=real_scaling)
-    gauss_combine.saveBoxplot(pr_results, "pr", map_path)
-    gauss_combine.saveBoxplot(dc_results, "dc", map_path)
-
+    for dimension in dimensions:
+        if real_scaling:
+            map_path = f"./gaussian_dimension/paper_img/curves/"
+        else:
+            map_path = f"./gaussian_dimension/paper_img/curves/"
+        info_dict, data_dict = ch_den.getCurveData(iters, k_vals, sample_size, dimension, ratios,
+                                                           real_scaling=real_scaling)
+        ch_den.plotCurve(info_dict, map_path, real_scaling=real_scaling)
 
 def runGaussian(dimensions, real_scaling):
     iters = 10
     sample_size = 1000
-    k_vals = [i for i in range(1, 100, 10)]
-    k_vals = [1, sample_size - 1]
-    ratios_taken = 20
+    k_vals = [i for i in range(1, sample_size, 1)]
+    ratios_taken = 10
     ratios = np.round(np.linspace(0.1,  1, ratios_taken), 4)
 
-    # ch_den.plotCurve(calc_dict, data_dict, dimension, map_path, real_scaling=real_scaling)
     for dimension in dimensions:
         if real_scaling:
             map_path = f"./gaussian_dimension/paper_img/d{dimension}_real/"
+            map_path = f"./gaussian_dimension/paper_img/tables_real/"
         else:
             map_path = f"./gaussian_dimension/paper_img/d{dimension}_fake/"
+            map_path = f"./gaussian_dimension/paper_img/tables_fake/"
         pr_results, dc_results, data_dict = ch_den.doCalcs(iters, k_vals, sample_size, dimension, ratios, real_scaling=real_scaling)
         ch_den.makeTable("pr", dimension, pr_results, map_path, real_scaling)
         ch_den.makeTable("dc", dimension, dc_results, map_path, real_scaling)
 
-def gausianBestK(dimensions, real_scaling):
-    iters = 5
+def saveDict(score_dict, metric_name, experiment_config, auc_scores, map_path):
+    saved_dict = {}
+    k_distances = np.array(list(score_dict.values()))
+    saved_dict["metric_name"] = metric_name
+    saved_dict["distances"] = k_distances
+    saved_dict["auc_scores"] = auc_scores
+    saved_dict["experiment_config"] = experiment_config
+    date_str = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
+    save_path = f"{map_path}d{experiment_config['dimension']}_{date_str}.pkl"
+    util.savePickle(save_path, saved_dict)
+
+def saveDistances(iters, dimensions, ratios_taken, pr_map_path, dc_map_path, real_scaling):
     sample_size = 1000
-    ratios_taken = 10
-    ratios = np.round(np.linspace(0.1, 1, ratios_taken), 4)
-    k_vals = [i for i in range(1, 100, 5)]
-    k_vals = [1, 3, 5, 7, 10, 50, sample_size // 4, sample_size // 2 ,sample_size - 1]
-    if real_scaling:
-        map_path = f"./gaussian_dimension/paper_img/boxplots/d64_real/"
-    else:
-        map_path = f"./gaussian_dimension/paper_img/boxplots/d64_fake/"
-
-    # try_separate = True
-    # if try_separate:
-    #     for ratio in ratios:
-    #         pr_calc, dc_calc = ch_den.getNearestDistances(iters, k_vals, sample_size,
-    #                                                       dimension, [ratio], real_scaling)
-    #         k_vals_np = np.array(k_vals)
-    #         ch_den.saveBoxplot(pr_calc, k_vals_np, f"pr_{ratio}", map_path)
-    #         ch_den.saveBoxplot(dc_calc, k_vals_np, f"dc__{ratio}", map_path)
-
+    ratios = np.round(np.linspace(.1, 1, ratios_taken), 4)
+    k_vals = [i for i in range(1, sample_size, 1)]
     for dimension in dimensions:
-        pr_k_results, dc_k_results = ch_den.getNearestDistances(iters, k_vals, sample_size,
+        pr_k_results, dc_k_results, auc_scores = ch_den.getNearestDistances(iters, k_vals, sample_size,
                                                       dimension, ratios, real_scaling)
-        k_vals_np = np.array(k_vals)
-        ch_den.saveBoxplot(pr_k_results, k_vals_np, f"pr_all_d{dimension}", map_path)
-        ch_den.saveBoxplot(dc_k_results, k_vals_np, f"dc__all_d{dimension}", map_path)
+        auc_scores_np = np.array(auc_scores)
+        experiment_config = {"iters":iters, "samples":sample_size, "ratios":ratios,
+                             "real_scaled":real_scaled, "dimension":dimension}
+        saveDict(pr_k_results, "pr", experiment_config, auc_scores_np, pr_map_path)
+        saveDict(dc_k_results, "dc", experiment_config, auc_scores_np, dc_map_path)
 
-def runExperiments():
-    run_combine = False
-    dimensions = [2, 64, 1000]
-    dimensions = [64]
-    for dimension in dimensions:
-        if run_combine:
-            runCombine(dimension, real_scaling=True)
-            runCombine(dimension, real_scaling=False)
-        else:
-            runGaussian(dimension, real_scaling=True)
-            runGaussian(dimension, real_scaling=False)
 
-dimensions = [2]
-runGaussian(dimensions, True)
-# gausianBestK(dimensions, True)
-# gausianBestK(dimensions, False)
+iters = 2
+ratios_taken = int(sys.argv[1])
+dimensions_amount = list(sys.argv[2])
+dimensions = [2**i for i in range(1, dimensions_amount+1)]
+real_scaled = bool(int(sys.argv[3]))
+real_scaled_str = "real_scaled" if real_scaled else "fake_scaled"
+print(ratios_taken, dimensions)
+print(real_scaled)
 
+# pr_map_path = f"./factors/pr/{real_scaled_str}/"
+# dc_map_path = f"./factors/dc/{real_scaled_str}/"
+# Path(pr_map_path).mkdir(parents=True, exist_ok=True)
+# Path(dc_map_path).mkdir(parents=True, exist_ok=True)
+# saveDistances(iters, dimensions, ratios_taken,
+#               pr_map_path, dc_map_path, real_scaled)
+#
+#
