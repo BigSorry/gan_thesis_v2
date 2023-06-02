@@ -3,7 +3,7 @@ import helper_functions as util
 import check_densities as ch_den
 import glob
 import matplotlib.pyplot as plt
-import matplotlib.transforms
+from pathlib import Path
 
 def plotTable(distances, save_path):
     distances = np.array(distances)
@@ -44,18 +44,19 @@ def updateDict(dict, metric_name, scaling, dimension, auc_index, values_added):
         dict[first_key][second_key] = []
     dict[first_key][second_key] = values_added
 
-def distancePlot(auc_data, save_path):
-    plt.figure()
-    for group_nr, mean_distances in auc_data.items():
-        x = np.arange(mean_distances.shape[0]) + 1
-        y = mean_distances
-        plt.plot(x, y, label=f"auc_{group_nr}")
-    plt.xscale("log")
-    plt.xlabel("K-values")
-    plt.ylabel("Distances")
-    plt.legend()
-    plt.savefig(save_path, bbox_inches='tight')
-    plt.close()
+def distancePlot(auc_data, save_map):
+    for group_nr, dict_info in auc_data.items():
+        plt.figure()
+        for dimension, mean_distances in dict_info.items():
+            x = np.arange(mean_distances.shape[0]) + 1
+            y = mean_distances
+            plt.plot(x, y, label=f"dim_{dimension}")
+        plt.xscale("log")
+        plt.xlabel("K-values")
+        plt.ylabel("Distances")
+        plt.legend()
+        plt.savefig(f"{save_map}auc_nr{group_nr}.png", bbox_inches='tight')
+        plt.close()
 def corrPlot(auc_data, save_path):
     plt.figure()
     for group_nr, auc_plot_data in auc_data.items():
@@ -65,7 +66,6 @@ def corrPlot(auc_data, save_path):
         x_sorted = x[index_sorted]
         y_sorted = y[index_sorted]
         plt.plot(x_sorted, y_sorted, label=f"auc_{group_nr}")
-    plt.xscale("log")
     plt.xlabel("Dimension")
     plt.ylabel("Correlation distance vs K")
     plt.legend()
@@ -85,7 +85,7 @@ for metric in metrics:
             sample_size = dict["experiment_config"]["samples"]
             dimension = dict["experiment_config"]["dimension"]
             iters = dict["experiment_config"]["iters"]
-            if iters > 1:
+            if dimension > 100:
                 k_vals = [i for i in range(1, sample_size, 1)]
                 k_scoring = np.zeros(len(k_vals))
                 auc_filter = [(0, np.percentile(auc_scores, 25)), (np.percentile(auc_scores, 25), np.percentile(auc_scores, 75)),
@@ -96,24 +96,26 @@ for metric in metrics:
                     updateDict(table_data, metric, scaling, dimension, auc_index, filter_distances)
 
 
-map_images = "./gaussian_dimension/paper_img/plots/"
+base_map = "./gaussian_dimension/paper_img/plots/"
 for (metric_name, scaling), dict_info in table_data.items():
-    save_map = f"{map_images}/{metric_name}_{scaling}/"
     column_labels = [f"Top k{i}" for i in range(10)]
     auc_data = {i: {"x": [], "y": []} for i in range(4)}
-    auc_data_distances = {i: [] for i in range(4)}
+    auc_data_distances = {i: {} for i in range(4)}
     for (dimension, auc_index), distances in dict_info.items():
         mean_vec = distances.mean(axis=1)
         correlation_coeff = np.corrcoef(mean_vec, k_vals)
         auc_data[auc_index]["x"].append(dimension)
         auc_data[auc_index]["y"].append(correlation_coeff[0, 1])
-        auc_data_distances[auc_index] = mean_vec
+        if dimension not in auc_data_distances[auc_index]:
+            auc_data_distances[auc_index][dimension] = mean_vec
 
-    key = (metric_name, scaling)
-    save_path = f"{map_images}{key}_distances.png"
-    distancePlot(auc_data_distances, save_path)
-    save_path = f"{map_images}{key}_corr.png"
-    corrPlot(auc_data, save_path)
+    key_str = f"{metric_name}_{scaling}"
+    sub_map = f"{base_map}{key_str}/"
+    Path(sub_map).mkdir(parents=True, exist_ok=True)
+    Path(sub_map).mkdir(parents=True, exist_ok=True)
+    save_path_corr = f"{sub_map}corr.png"
+    distancePlot(auc_data_distances, sub_map)
+    corrPlot(auc_data, save_path_corr)
 
 
 
