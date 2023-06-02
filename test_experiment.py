@@ -54,28 +54,33 @@ def distancePlot(auc_data, save_map):
         plt.xscale("log")
         plt.xlabel("K-values")
         plt.ylabel("Distances")
+        plt.ylim([0, 1])
         plt.legend()
         plt.savefig(f"{save_map}auc_nr{group_nr}.png", bbox_inches='tight')
         plt.close()
-def corrPlot(auc_data, save_path):
-    plt.figure()
+def corrPlot(auc_data, save_map):
     for group_nr, auc_plot_data in auc_data.items():
+        plt.figure()
         x = np.array(auc_plot_data["x"])
         y = np.array(auc_plot_data["y"])
         index_sorted = np.argsort(x)
-        x_sorted = x[index_sorted]
+        x_vals = (np.arange(x.shape[0]) + 1)
+        x_label = x[index_sorted]
         y_sorted = y[index_sorted]
-        plt.plot(x_sorted, y_sorted, label=f"auc_{group_nr}")
-    plt.xlabel("Dimension")
-    plt.ylabel("Correlation distance vs K")
-    plt.legend()
-    plt.savefig(save_path, bbox_inches='tight')
-    plt.close()
+        plt.bar(x_vals, y_sorted, label=f"auc_{group_nr}")
+        plt.xticks(x_vals, x_label)
+        plt.xlabel("Dimension")
+        plt.ylabel("Correlation distance vs K")
+        plt.ylim([0, 1])
+        plt.legend()
+        plt.savefig(f"{save_map}auc_nr{group_nr}_corr.png", bbox_inches='tight')
+        plt.close()
 
 path = f"./factors/pr/real_scaled/*.pkl"
 metrics = ["pr", "dc"]
 scalings = ["real", "fake"]
 table_data = {}
+sel_dimension = [2, 64, 512]
 for metric in metrics:
     for scaling in scalings:
         for file in glob.glob(path):
@@ -85,7 +90,7 @@ for metric in metrics:
             sample_size = dict["experiment_config"]["samples"]
             dimension = dict["experiment_config"]["dimension"]
             iters = dict["experiment_config"]["iters"]
-            if dimension > 100:
+            if dimension > 1:
                 k_vals = [i for i in range(1, sample_size, 1)]
                 k_scoring = np.zeros(len(k_vals))
                 auc_filter = [(0, np.percentile(auc_scores, 25)), (np.percentile(auc_scores, 25), np.percentile(auc_scores, 75)),
@@ -113,9 +118,8 @@ for (metric_name, scaling), dict_info in table_data.items():
     sub_map = f"{base_map}{key_str}/"
     Path(sub_map).mkdir(parents=True, exist_ok=True)
     Path(sub_map).mkdir(parents=True, exist_ok=True)
-    save_path_corr = f"{sub_map}corr.png"
     distancePlot(auc_data_distances, sub_map)
-    corrPlot(auc_data, save_path_corr)
+    corrPlot(auc_data, sub_map)
 
 
 
