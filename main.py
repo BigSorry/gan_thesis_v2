@@ -73,11 +73,11 @@ real_scaled_str = "real_scaled" if real_scaled else "fake_scaled"
 print(ratios_taken, dimensions)
 print(real_scaled)
 
-# pr_map_path = f"./factors/pr/{real_scaled_str}/"
-# dc_map_path = f"./factors/dc/{real_scaled_str}/"
-# Path(pr_map_path).mkdir(parents=True, exist_ok=True)
-# Path(dc_map_path).mkdir(parents=True, exist_ok=True)
-# saveDistances(iters, dimensions, ratios_taken,
-#               pr_map_path, dc_map_path, real_scaled)
-#
-#
+pr_map_path = f"./factors/pr/{real_scaled_str}/"
+dc_map_path = f"./factors/dc/{real_scaled_str}/"
+Path(pr_map_path).mkdir(parents=True, exist_ok=True)
+Path(dc_map_path).mkdir(parents=True, exist_ok=True)
+saveDistances(iters, dimensions, ratios_taken,
+              pr_map_path, dc_map_path, real_scaled)
+
+

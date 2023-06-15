@@ -4,6 +4,7 @@ import check_densities as ch_den
 import glob
 import matplotlib.pyplot as plt
 from pathlib import Path
+import seaborn as sns
 
 def plotTable(distances, save_path):
     distances = np.array(distances)
@@ -44,13 +45,40 @@ def updateDict(dict, metric_name, scaling, dimension, auc_index, values_added):
         dict[first_key][second_key] = []
     dict[first_key][second_key] = values_added
 
-def distancePlot(auc_data, save_map):
-    for group_nr, dict_info in auc_data.items():
+def bestKPlot(best_k_dict, save_map):
+    for group_nr, best_indices in best_k_dict.items():
+        all_dims = sorted(list(best_indices.keys()))
         plt.figure()
-        for dimension, mean_distances in dict_info.items():
+        for dim in all_dims:
+            best_ks = best_indices[dim]
+            unique, counts = np.unique(best_ks, return_counts=True)
+            plt.bar(unique, counts)
+        plt.xlabel("K-values")
+        plt.xscale("log")
+        plt.ylabel("Count Best value")
+        plt.savefig(f"{save_map}auc_nr_{group_nr}.png", bbox_inches='tight')
+        plt.close()
+
+def distanceBoxplot(auc_data, save_map):
+    for group_nr, distance_dict in auc_data.items():
+        plt.figure()
+        list_distances = list(distance_dict.values())
+        distances_np = np.hstack(list_distances)
+        plt.boxplot(distances_np.T)
+        plt.xscale("log")
+        plt.xlabel("K-values")
+        plt.ylabel("Distances")
+        plt.savefig(f"{save_map}auc_nr{group_nr}.png", bbox_inches='tight')
+        plt.close()
+def distancePlot(auc_data, save_map):
+    for group_nr, distance_dict in auc_data.items():
+        plt.figure()
+        all_dims = sorted(list(distance_dict.keys()))
+        for dim in all_dims:
+            mean_distances = distance_dict[dim]
             x = np.arange(mean_distances.shape[0]) + 1
             y = mean_distances
-            plt.plot(x, y, label=f"dim_{dimension}")
+            plt.plot(x, y, label=f"dim_{dim}")
         plt.xscale("log")
         plt.xlabel("K-values")
         plt.ylabel("Distances")
@@ -75,53 +103,75 @@ def corrPlot(auc_data, save_map):
         plt.legend()
         plt.savefig(f"{save_map}auc_nr{group_nr}_corr.png", bbox_inches='tight')
         plt.close()
+def plotAucScores(auc_scores):
+    plt.figure()
+    sns.histplot(auc_scores, bins=10, stat="probability")
+    plt.ylabel("Probability")
+    plt.xlabel("AUC score")
 
-path = f"./factors/pr/real_scaled/*.pkl"
 metrics = ["pr", "dc"]
-scalings = ["real", "fake"]
+scalings = ["real_scaled", "fake_scaled"]
 table_data = {}
 sel_dimension = [2, 64, 512]
+all_auc = []
+auc_filter = [(0, 0.1), (0.1, 0.9), (0.9, 1), (0, 1)]
 for metric in metrics:
     for scaling in scalings:
+        path = f"./factors/{metric}/{scaling}/*.pkl"
         for file in glob.glob(path):
             dict = util.readPickle(file)
             auc_scores = dict["auc_scores"]
+            all_auc.extend(auc_scores)
             distances = dict["distances"]
             sample_size = dict["experiment_config"]["samples"]
             dimension = dict["experiment_config"]["dimension"]
             iters = dict["experiment_config"]["iters"]
-            if dimension > 1:
+            if dimension > 1  and iters == 10:
                 k_vals = [i for i in range(1, sample_size, 1)]
                 k_scoring = np.zeros(len(k_vals))
-                auc_filter = [(0, np.percentile(auc_scores, 25)), (np.percentile(auc_scores, 25), np.percentile(auc_scores, 75)),
-                               (np.percentile(auc_scores, 75), 1), (0, 1)]
                 for auc_index, (begin_auc, end_auc) in enumerate(auc_filter):
                     filter_distances = filterDistances(distances, auc_scores, begin_auc, end_auc)
-                    sorted_indices = bestK(filter_distances)
                     updateDict(table_data, metric, scaling, dimension, auc_index, filter_distances)
 
 
-base_map = "./gaussian_dimension/paper_img/plots/"
-for (metric_name, scaling), dict_info in table_data.items():
-    column_labels = [f"Top k{i}" for i in range(10)]
-    auc_data = {i: {"x": [], "y": []} for i in range(4)}
-    auc_data_distances = {i: {} for i in range(4)}
-    for (dimension, auc_index), distances in dict_info.items():
-        mean_vec = distances.mean(axis=1)
-        correlation_coeff = np.corrcoef(mean_vec, k_vals)
-        auc_data[auc_index]["x"].append(dimension)
-        auc_data[auc_index]["y"].append(correlation_coeff[0, 1])
-        if dimension not in auc_data_distances[auc_index]:
-            auc_data_distances[auc_index][dimension] = mean_vec
+plotting=True
+if plotting:
+    base_map_distance = "./gaussian_dimension/paper_img/distance_plots/"
+    base_map_distance_box = "./gaussian_dimension/paper_img/boxplots/"
+    base_map_best_k = "./gaussian_dimension/paper_img/best_k/"
+    for (metric_name, scaling), dict_info in table_data.items():
+        column_labels = [f"Top k{i}" for i in range(10)]
+        auc_data = {i: {"x": [], "y": []} for i in range(4)}
+        auc_data_distances = {i: {} for i in range(4)}
+        all_data_distances = {i: {} for i in range(4)}
+        best_k_runs = {i: {} for i in range(4)}
 
-    key_str = f"{metric_name}_{scaling}"
-    sub_map = f"{base_map}{key_str}/"
-    Path(sub_map).mkdir(parents=True, exist_ok=True)
-    Path(sub_map).mkdir(parents=True, exist_ok=True)
-    distancePlot(auc_data_distances, sub_map)
-    corrPlot(auc_data, sub_map)
+        # Distance dimension -> k_val x experiment run
+        for (dimension, auc_index), distances in dict_info.items():
+            if distances.shape[0] > 0:
+                mean_vec = distances.mean(axis=1)
+                best_k = distances.argmin(axis=0) + 1
+                correlation_coeff = np.corrcoef(mean_vec, k_vals)
+                # auc_data[auc_index]["x"].append(dimension)
+                # auc_data[auc_index]["y"].append(correlation_coeff[0, 1])
+                auc_data_distances[auc_index][dimension] = mean_vec
+                all_data_distances[auc_index][dimension] = distances
+                best_k_runs[auc_index][dimension] = best_k
 
 
+        key_str = f"{metric_name}_{scaling}"
+        sub_map_distance = f"{base_map_distance}{key_str}/"
+        sub_map_distance_boxplot = f"{base_map_distance_box}{key_str}/"
+        sub_map_best_k = f"{base_map_best_k}{key_str}/"
+        Path(sub_map_distance).mkdir(parents=True, exist_ok=True)
+        Path(sub_map_distance_boxplot).mkdir(parents=True, exist_ok=True)
+        Path(sub_map_best_k).mkdir(parents=True, exist_ok=True)
+        distanceBoxplot(all_data_distances, sub_map_distance_boxplot)
+        distancePlot(auc_data_distances, sub_map_distance)
+        bestKPlot(best_k_runs, sub_map_best_k)
+        #corrPlot(auc_data, sub_map)
 
 
-plt.show()
+# plotAucScores(all_auc)
+# plt.show()
+
