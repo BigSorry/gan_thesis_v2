@@ -8,9 +8,10 @@ import seaborn as sns
 
 def expectedK(k_values, counts):
     counts_np = np.array(counts)
-    densities = counts_np / np.sum(counts_np)
-    values = k_values * densities
-    expected_value = np.sum(values)
+    counts_np[counts_np <= 5] = 0
+    densities_normed = counts_np / np.sum(counts_np)
+    contributions = k_values * densities_normed
+    expected_value = np.sum(contributions)
 
     return expected_value
 
@@ -68,7 +69,7 @@ def getOverview(filtered_df, auc_filter):
             dimension_data = sel_dataframe.loc[sel_dataframe["dimension"] == dim, :]
             if dimension_data.shape[0] > 0:
                 filter_data = dimension_data.groupby(["iter", "auc_score"]).\
-                    apply(lambda x: x.nsmallest(n=3, columns='distance')).reset_index(drop=True)
+                    apply(lambda x: x.nsmallest(n=5, columns='distance')).reset_index(drop=True)
                 counted_data = filter_data.groupby("k_val").size()
                 for k_val, counts in counted_data.items():
                     if k_val not in score_dict[auc_index]:
@@ -117,9 +118,10 @@ scalings = ["real_scaled", "fake_scaled"]
 df_path = "./gaussian_dimension/dataframe.pkl"
 df = pd.read_pickle(df_path)
 auc_filter = [(0, 0.1), (0.1, 0.99), (0.99, 1)]
+auc_filter = [(0, 0.1), (0.1, 0.9), (0.9, 1)]
 print(df.info())
 plotting=True
-base_map = "./gaussian_dimension/paper_img/boxplot_dimensions/"
+base_map = "./gaussian_dimension/paper_img/boxplot_auc/"
 overview_map = "./gaussian_dimension/paper_img/overview/"
 overview_dict = {}
 if plotting:
@@ -131,7 +133,7 @@ if plotting:
             sub_map = f"{base_map}{metric_name}_{scaling_mode}/"
             count_dict = getOverview(sel_data, auc_filter)
             overview_dict[(metric_name, scaling_mode)] = count_dict
-            # dfDistancePlots(filter_dim, auc_filter, sub_map)
+            dfDistancePlots(sel_data, auc_filter, sub_map)
 
     overviewPlot(overview_dict, auc_filter, overview_map)
 
