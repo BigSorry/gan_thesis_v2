@@ -27,6 +27,19 @@ def getGaussian(sample_size, dimension, lambda_factors):
 
     return reference_distribution, scaled_distributions
 
+def getGaussianDimension(sample_size, dimension, transform_dimensions, lambda_factors):
+    mean_vec = np.zeros(dimension)
+    cov_ref = np.eye(dimension) * lambda_factors[0]
+    cov_scaled = np.eye(dimension)
+    index_transformed = np.random.choice(cov_scaled.shape[0], transform_dimensions, replace=False)
+    for index in index_transformed:
+        cov_scaled[index, index] = lambda_factors[1]
+    reference_distribution = np.random.multivariate_normal(mean_vec, cov_ref, sample_size)
+    scaled_distributions = np.random.multivariate_normal(mean_vec, cov_scaled, sample_size)
+
+    return reference_distribution, scaled_distributions
+
+
 def filterFactors(iters, k_vals, sample_size, dimension, factors, filter_std, real_scaling=False):
     factors_saved = []
     for i in range(iters):
@@ -253,6 +266,40 @@ def getNearestDistances(iters, k_vals, sample_size, dimension, ratios, real_scal
 
     return pr_results, dc_results, auc_scores
 
+# Direct to df no dict saving.
+def getEvaluationPairs(iters, k_vals, sample_size, dimension, dimension_transformed, ratios, real_scaling=False):
+    base_value = 1
+    row_info = []
+    scaling_mode = "real_scaled" if real_scaling else "fale_scaled"
+    for iter in range(iters):
+        for index, ratio in enumerate(ratios):
+            scale = base_value*ratio
+            lambda_factors = [base_value, scale]
+            reference_distribution, scaled_distribution = getGaussianDimension(sample_size, dimension, dimension_transformed, lambda_factors)
+            if real_scaling:
+                lambda_factors = [scale, base_value]
+                distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(scaled_distribution, reference_distribution)
+                curve_classifier = exp.getCurveClassifier("gaussian", scaled_distribution, reference_distribution, lambda_factors)
+            else:
+                distance_matrix_real, distance_matrix_fake, distance_matrix_pairs = util.getDistanceMatrices(reference_distribution, scaled_distribution)
+                curve_classifier = exp.getCurveClassifier("gaussian", reference_distribution, scaled_distribution, lambda_factors)
+
+            auc = integrate.trapz(np.round(curve_classifier[:, 1], 2), np.round(curve_classifier[:, 0], 2))
+            pr_pairs, dc_pairs = exp.getKNN(distance_matrix_real, distance_matrix_fake, distance_matrix_pairs, k_vals)
+            pr_aboves, pr_nearest_distances = exp.getStats(curve_classifier, pr_pairs)
+            dc_aboves, dc_nearest_distances = exp.getStats(curve_classifier, dc_pairs)
+
+            for index, k_val in enumerate(k_vals):
+                pr_score = pr_pairs[index, :]
+                dc_score = dc_pairs[index, :]
+                pr_distance = pr_nearest_distances[index]
+                dc_distance = dc_nearest_distances[index]
+                pr_row = ["pr", scaling_mode, iter, dimension, dimension_transformed, auc, k_val, pr_distance, pr_score[0], pr_score[1]]
+                dc_row = ["dc", scaling_mode, iter, dimension, dimension_transformed, auc, k_val, dc_distance, dc_score[0], dc_score[1]]
+                row_info.append(pr_row)
+                row_info.append(dc_row)
+
+    return row_info
 
 def combineK(result_dict, dividing_factor=10):
     new_results = {}

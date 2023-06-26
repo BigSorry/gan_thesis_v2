@@ -5,41 +5,7 @@ from pathlib import Path
 import matplotlib.transforms
 import pandas as pd
 import seaborn as sns
-def dfDistancePlots(dataframe, auc_filter, sub_map):
-    sorted_dims = sorted(dataframe["dimension"].unique())
-    for auc_index, (auc_begin, auc_end) in enumerate(auc_filter):
-        sel_dataframe = dataframe.loc[(dataframe["auc_score"] >= auc_begin) & (dataframe["auc_score"] <= auc_end), :]
-        auc_map = f"{sub_map}/auc{auc_index}/"
-        Path(auc_map).mkdir(parents=True, exist_ok=True)
-        for index, dim in enumerate(sorted_dims):
-            dimension_data = sel_dataframe.loc[sel_dataframe["dimension"] == dim, :]
-            if dimension_data.shape[0] > 0:
-                plt.figure(figsize=(16, 8))
-                filter_data = dimension_data.groupby(["iter", "auc_score"]).\
-                    apply(lambda x: x.nsmallest(n=5, columns='distance')).reset_index(drop=True)
-                grouped_data = filter_data.groupby("k_val")
-                counted_data = grouped_data.size()
-                counted_data = counted_data[counted_data > 5]
-                k_vals = counted_data.index.values
-                x = np.arange(k_vals.shape[0]) + 1
-                y = counted_data.values
-                plt.subplot(2, 1, 1)
-                plt.bar(x, y)
-                plt.xticks(x, k_vals)
-                plt.xlabel("K-values")
-                if k_vals.shape[0] > 50:
-                    plt.xscale("log")
-                # Boxplots
-                groups = dimension_data.groupby("k_val")
-                x = list(groups.groups.keys())
-                y = groups['distance'].apply(np.hstack).values
-                plt.subplot(2,1,2)
-                plt.boxplot(y.T, positions=x)
-                plt.xscale("log")
-
-                plt.ylabel("Count Top-10 per auc score")
-                plt.savefig(f"{auc_map}dim{dim}.png", bbox_inches='tight')
-                plt.close()
+import glob
 
 def expectedK(k_values, counts):
     counts_np = np.array(counts)
@@ -50,7 +16,7 @@ def expectedK(k_values, counts):
 
     return expected_value
 
-def getPlotDict(overview_count_plot):
+def getExpectedValueDict(overview_count_plot):
     plot_info = {}
     for (metric_name, scaling_mode), auc_dict in overview_count_plot.items():
         for auc_index, dimension_dict in auc_dict.items():
@@ -65,18 +31,69 @@ def getPlotDict(overview_count_plot):
 
     return plot_info
 
-def createTable(plot_dict, metric_name, scaling_mode, save_map):
+def overviewPlot(plot_dict, metric_name, scaling_mode, save_map):
     key_pairs = np.array(list(plot_dict.keys()))
     sorted_dims = sorted(np.unique(key_pairs[:, 1]))
     sorted_auc = sorted(np.unique(key_pairs[:, 0]))
-    auc_labels = [f"auc_{auc}\t" for auc in sorted_auc]
+    for auc_index in sorted_auc:
+        x_vals = []
+        y_vals = []
+        for dimension_index, dimension in enumerate(sorted_dims):
+            expected_value = np.round(plot_dict[(auc_index, dimension)], 2)
+            x_vals.append(dimension)
+            y_vals.append(expected_value)
+        plt.plot(x_vals, y_vals, label=auc_index)
+    plt.legend()
+    plt.savefig(f"{save_map}overview_plot_{metric_name}_{scaling_mode}.png", bbox_inches="tight")
+    plt.close()
+
+def overviewBoxplot(dataframe, metric_name, scaling_mode, save_map):
+    sel_data = dataframe.loc[(dataframe["dimension"] > 1) & (dataframe["dimension"] <= 555), :]
+    dimensions_sorted = sorted(sel_data["dimension"].unique())
+    sorted_auc = sorted(sel_data["auc_group"].unique())
+    for auc_index in sorted_auc:
+        k_picks = []
+        picks_per_run = []
+        sel_data = dataframe.loc[dataframe["auc_group"] == auc_index, :]
+        if sel_data.shape[0] > 0:
+            for dimension in dimensions_sorted:
+                dimension_data = sel_data.loc[sel_data["dimension"] == dimension]
+                # filter_data = dimension_data.groupby(["iter", "auc_score"]). \
+                #      apply(lambda x: x.nsmallest(n=5, columns='distance')).reset_index(drop=True)
+                filter_data = dimension_data.groupby(["iter", "auc_score"]). \
+                    apply(lambda x: x[x["distance"] <= 0.1]).reset_index(drop=True)
+                best_picks = filter_data["k_val"].values
+                k_picks.append(best_picks)
+                filtered_percentage = np.round(filter_data.shape[0] / dimension_data.shape[0], 1)
+                picks_per_run.append(filtered_percentage)
+
+            print(picks_per_run)
+            old_y = np.arange(len(dimensions_sorted)) + 1
+            new_positions = old_y * 2
+            plt.boxplot(k_picks, vert=False)
+            new_y = [f"Dim_{dimensions_sorted[i]}\n ({picks_per_run[i]}% remaining k-values)" for i in range(len(dimensions_sorted))]
+            plt.yticks(old_y, new_y, rotation=0)
+            #plt.ylabel("Dimension")
+            plt.xscale("log")
+            plt.xlim([1, 1000])
+            plt.xlabel("K-value (log scale)")
+            sub_map = f"{save_map}/auc{auc_index}/"
+            Path(sub_map).mkdir(parents=True, exist_ok=True)
+            plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}.png", bbox_inches="tight")
+            plt.close()
+
+def overviewTablePlot(plot_dict, metric_name, scaling_mode, save_map):
+    key_pairs = np.array(list(plot_dict.keys()))
+    sorted_dims = sorted(np.unique(key_pairs[:, 1]))
+    sorted_auc = sorted(np.unique(key_pairs[:, 0]))
+    auc_labels = [f"auc_{auc} " for auc in sorted_auc]
     table_array = np.zeros((len(sorted_auc), len(sorted_dims)))
-    cell_colors = np.zeros((len(sorted_auc), len(sorted_dims)))
+    cell_colors = np.zeros((len(sorted_auc), len(sorted_dims))).astype(str)
     for auc_index in sorted_auc:
         for dimension_index, dimension in enumerate(sorted_dims):
             expected_value = np.round(plot_dict[(auc_index, dimension)], 2)
             table_array[auc_index][dimension_index] = expected_value
-            color = "red" if expected_value > 100 else "white"
+            color = "red" if expected_value > 100 else "w"
             cell_colors[auc_index][dimension_index] = color
 
     table = plt.table(cellText=table_array,
@@ -97,25 +114,26 @@ def createTable(plot_dict, metric_name, scaling_mode, save_map):
     # save and clip by new bounding box
     plt.savefig(f"{save_map}overview_{metric_name}_{scaling_mode}.png", bbox_inches=nbbox)
     plt.close()
-def distanceBoxplot(problem_dict, save_map):
-    for (metric_name, scaling), distance_dict in problem_dict.items():
-        for auc_index, auc_dict in distance_dict.items():
-            sub_map = f"{save_map}{metric_name}_{scaling}/auc{auc_index}/"
-            Path(sub_map).mkdir(parents=True, exist_ok=True)
-            plt.figure(figsize=(16, 8))
-            all_dims = sorted(list(auc_dict.keys()))
-            unique_dims = np.unique(all_dims).shape[0]
-            #adjust = np.linspace(0.2, .8, unique_dims)
-            for index, dim in enumerate(all_dims):
-                distances = auc_dict[dim]
-                grouped_distances = distances[:990, :].reshape(99, -1)
-                plt.boxplot(distances.T)
 
-                plt.xlabel("K-values")
-                #plt.xscale("log")
-                plt.ylabel("Distance")
-                plt.savefig(f"{sub_map}dim{dim}.png", bbox_inches='tight')
-                plt.close()
+def overiewBarPlot(plot_dict, metric_name, scaling_mode, save_map):
+    key_pairs = np.array(list(plot_dict.keys()))
+    sorted_auc = sorted(np.unique(key_pairs[:, 0]))
+    for auc in sorted_auc:
+        x_vals = []
+        y_labels = []
+        for (other_auc, dimension), expected_value in plot_dict.items():
+            if auc == other_auc:
+                x_vals.append(expected_value)
+                y_labels.append(dimension)
+
+        y_vals = np.arange(len(y_labels)) + 1
+        plt.barh(y_vals, x_vals)
+        plt.yticks(y_vals, y_labels)
+        max_expected_value = np.max(x_vals)
+        if max_expected_value < 21:
+            plt.xlim([0, 20])
+        plt.savefig(f"{save_map}overview_{metric_name}_{scaling_mode}_auc{auc}.png", bbox_inches='tight')
+        plt.close()
 
 def getOverview(filtered_df, auc_filter):
     sorted_dims = sorted(filtered_df["dimension"].unique())
@@ -128,7 +146,7 @@ def getOverview(filtered_df, auc_filter):
             dimension_data = sel_dataframe.loc[sel_dataframe["dimension"] == dim, :]
             if dimension_data.shape[0] > 0:
                 filter_data = dimension_data.groupby(["iter", "auc_score"]).\
-                    apply(lambda x: x.nsmallest(n=5, columns='distance')).reset_index(drop=True)
+                    apply(lambda x: x.nsmallest(n=1, columns='distance')).reset_index(drop=True)
                 counted_data = filter_data.groupby("k_val").size()
                 for k_val, counts in counted_data.items():
                     if k_val not in score_dict[auc_index][dim]:
@@ -137,36 +155,103 @@ def getOverview(filtered_df, auc_filter):
                         score_dict[auc_index][dim][k_val] += counts
     return score_dict
 
+def resampleDF(dataframe, dimensions, min_group_count):
+    taken_indices = []
+    for dimension in dimensions:
+        dimension_data = dataframe.loc[dataframe["dimension"] == dimension, :]
+        df_elements = dimension_data.sample(n=min_group_count)
+        taken_indices.extend(list(df_elements.index))
+
+    return taken_indices
+def aucDimensionOverlap(dataframe, auc_filter):
+    dimensions = dataframe["dimension"].unique()
+    all_indices = []
+    for auc_index, (auc_begin, auc_end) in enumerate(auc_filter):
+        sel_data = dataframe.loc[(dataframe["auc_group"] == auc_index), :]
+        group_count = sel_data.groupby("dimension").size()
+        smallest_group = group_count.min()
+        taken_indices = resampleDF(sel_data, dimensions, smallest_group)
+        all_indices.extend(taken_indices)
+
+    end_dataframe = dataframe.loc[dataframe.index.isin(all_indices), :]
+    return end_dataframe
+
+def assignAUCGroup(dataframe, auc_filter):
+    dataframe["auc_group"] = -1
+    for auc_index, (auc_begin, auc_end) in enumerate(auc_filter):
+        bool_array = (dataframe["auc_score"] >= auc_begin) & (dataframe["auc_score"] <= auc_end)
+        dataframe.loc[bool_array, "auc_group"] = auc_index
+def aucFairness(dataframe):
+    dimensions = dataframe["dimension"].unique()
+    auc_scores = dataframe["auc_score"].unique()
+    smallest_group = -1
+    all_indices = []
+    for dimension in dimensions:
+        dimension_data = dataframe.loc[dataframe["dimension"] == dimension, :]
+        group_count = dimension_data.groupby("auc_score").size()
+        smallest_group = group_count.min()
+        for auc_index, auc_score in enumerate(auc_scores):
+            dimension_auc_data = dimension_data.loc[dimension_data["auc_score"] == auc_score, :]
+            df_elements = dimension_auc_data.iloc[:999, :]
+            all_indices.extend(list(df_elements.index))
+
+    end_dataframe = dataframe.loc[dataframe.index.isin(all_indices), :]
+    return end_dataframe
+
+def fixSaveDF(dataframe, save_path):
+    # Correct (wrong columns columns, old saving)
+    actual_distance = dataframe["first_score"]
+    actual_first = dataframe["second_score"]
+    actual_second = dataframe["distance"]
+    dataframe["distance"] = actual_distance
+    dataframe["first_score"] = actual_first
+    dataframe["second_score"] = actual_second
+    dataframe.to_pickle(f"{save_path}dataframe_all.pkl")
+def testDF(dataframe):
+    dataframe.boxplot(column=["auc_score"], by="dimension")
+    plt.show()
+
+def plotOverviews(dataframe, metric_name):
+    sel_data = dataframe.loc[(dataframe["metric_name"] == metric_name), :]
+    sel_data = sel_data.loc[(sel_data["dimension"] > 1) & (sel_data["dimension"] <= 555), :]
+
+
+    count_dict = getOverview(sel_data, auc_filter)
+    overview_dict[(metric_name, scaling_mode)] = count_dict
+    plot_dict = getExpectedValueDict(overview_dict)
+    overiewBarPlot(plot_dict, metric_name, scaling_mode, overview_map_bars)
+    overviewTablePlot(plot_dict, metric_name, scaling_mode, overview_map)
+
 metrics = ["pr", "dc"]
 scalings = ["real_scaled", "fake_scaled"]
-df_path = "./gaussian_dimension/dataframe.pkl"
-df = pd.read_pickle(df_path)
-auc_filter = [(0, 0.1), (0.1, 0.99), (0.99, 1)]
-auc_filter = [(0, 0.1), (0.1, 0.9), (0.9, 1)]
-print(df.info())
-plotting=True
-base_map = "./gaussian_dimension/paper_img/boxplot_auc_dimension/"
-overview_map = "./gaussian_dimension/paper_img/overview_dimension/"
+auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
+overview_map = "./gaussian_dimension/paper_img/overview_auc_dimension/"
+overview_map_bars = "./gaussian_dimension/paper_img/overview_auc_dimension/bars/"
+overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/"
+Path(overview_map).mkdir(parents=True, exist_ok=True)
+Path(overview_map_bars).mkdir(parents=True, exist_ok=True)
 overview_dict = {}
-if plotting:
+read_all = False
+for scaling_mode in scalings:
+    if read_all:
+        df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
+        df_list = []
+        sum_rows = 0
+        for file_name in glob.glob(df_path):
+            df = pd.read_pickle(file_name)
+            print(file_name, df.shape[0])
+            sum_rows += df.shape[0]
+            df_list.append(df)
+        all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
+    else:
+        df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+        all_dfs = util.readPickle(df_path_combined)
+        assignAUCGroup(all_dfs, auc_filter)
     for metric_name in metrics:
-        for scaling_mode in scalings:
-            sel_data = df.loc[(df["metric_name"] == metric_name) & (df["scaling_mode"] == scaling_mode), :]
-            sel_data = sel_data.loc[(sel_data["dimension"] <= 500), :]
-
-            sub_map = f"{base_map}{metric_name}_{scaling_mode}/"
-            count_dict = getOverview(sel_data, auc_filter)
-            overview_dict[(metric_name, scaling_mode)] = count_dict
-            #dfDistancePlots(sel_data, auc_filter, sub_map)
-
-            plot_dict = getPlotDict(overview_dict)
-            createTable(plot_dict, metric_name, scaling_mode, overview_map)
-
-
-
-    #distanceBoxplot(problem_dict, base_map)
-    #median_dict = getMedians(problem_dict)
-    #plotCorrTable(median_dict, base_map)
+        metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
+        overviewBoxplot(metric_df, metric_name, scaling_mode, overview_map_boxplots)
+        #plotOverviews(all_dfs, metric_name)
+        #testDF(all_dfs)
 
 
 

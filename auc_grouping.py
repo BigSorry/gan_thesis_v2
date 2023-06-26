@@ -113,6 +113,7 @@ def dfDistancePlots(dataframe, auc_filter, sub_map):
                 plt.savefig(f"{auc_map}dim{dim}.png", bbox_inches='tight')
                 plt.close()
 
+
 metrics = ["pr", "dc"]
 scalings = ["real_scaled", "fake_scaled"]
 df_path = "./gaussian_dimension/dataframe.pkl"
@@ -133,7 +134,7 @@ if plotting:
             sub_map = f"{base_map}{metric_name}_{scaling_mode}/"
             count_dict = getOverview(sel_data, auc_filter)
             overview_dict[(metric_name, scaling_mode)] = count_dict
-            dfDistancePlots(sel_data, auc_filter, sub_map)
+            #dfDistancePlots(sel_data, auc_filter, sub_map)
 
     overviewPlot(overview_dict, auc_filter, overview_map)
 
