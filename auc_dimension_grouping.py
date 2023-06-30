@@ -47,40 +47,84 @@ def overviewPlot(plot_dict, metric_name, scaling_mode, save_map):
     plt.savefig(f"{save_map}overview_plot_{metric_name}_{scaling_mode}.png", bbox_inches="tight")
     plt.close()
 
+def changeTableCellColor(cell_values, table, row_id, compare_val):
+    for column_id in range(cell_values.shape[1]):
+        value = cell_values[row_id, column_id]
+        if value >= compare_val:
+            table._cells[(row_id, column_id)]._text.set_color("white")
+
+def getBestValues(dimension_data):
+    grouped_data = dimension_data.groupby(["iter", "auc_score"])
+    k_values = []
+    avg_picks = 0
+    index = 0
+    avg_distance = 0
+    for name, group in grouped_data:
+        top_distance = group.nsmallest(1, "distance").loc[:, "distance"].max()
+        boolean_filter = (group["distance"] <= top_distance) | (
+            np.isclose(group["distance"], [top_distance], atol=1e-2))
+        filter_data = group.loc[boolean_filter, :]
+        best_picks = filter_data["k_val"].values
+        k_values.extend(best_picks)
+        avg_picks += best_picks.shape[0]
+        avg_distance += top_distance
+        index+=1
+
+    avg_picks = np.round(avg_picks / index, 1)
+    avg_distance = np.round(avg_distance / index, 1)
+
+    return k_values, avg_picks, index, avg_distance
+
+def createSmallTable(legend_info, dimensions):
+    xmin, ymin, width, height = 0, -0.65, 1, 0.5
+    table_vals = np.array(legend_info).T
+    colors = np.full(table_vals.shape, "w")
+    colors[0, :] = "000000"
+    colors[2, table_vals[2, :] >= 10] = "000000"
+    table = plt.table(cellText=table_vals,
+              rowLabels=["Dimension", "Total groups", "Average k-vals pick", "avg_distance"],
+              cellLoc="center",
+              cellColours=colors,
+              bbox=(xmin, ymin, width, height))
+
+    changeTableCellColor(table_vals, table, 0, 2)
+    changeTableCellColor(table_vals, table, 2, 10)
+    table.set_fontsize(16)
+
 def overviewBoxplot(dataframe, metric_name, scaling_mode, save_map):
     sel_data = dataframe.loc[(dataframe["dimension"] > 1) & (dataframe["dimension"] <= 555), :]
     dimensions_sorted = sorted(sel_data["dimension"].unique())
     sorted_auc = sorted(sel_data["auc_group"].unique())
     for auc_index in sorted_auc:
         k_picks = []
-        picks_per_run = []
+        label_info = []
+        legend_info = []
         sel_data = dataframe.loc[dataframe["auc_group"] == auc_index, :]
         if sel_data.shape[0] > 0:
             for dimension in dimensions_sorted:
                 dimension_data = sel_data.loc[sel_data["dimension"] == dimension]
-                # filter_data = dimension_data.groupby(["iter", "auc_score"]). \
-                #      apply(lambda x: x.nsmallest(n=5, columns='distance')).reset_index(drop=True)
-                filter_data = dimension_data.groupby(["iter", "auc_score"]). \
-                    apply(lambda x: x[x["distance"] <= 0.1]).reset_index(drop=True)
-                best_picks = filter_data["k_val"].values
+                best_picks, avg_picks, groups, avg_distance = getBestValues(dimension_data)
                 k_picks.append(best_picks)
-                filtered_percentage = np.round(filter_data.shape[0] / dimension_data.shape[0], 1)
-                picks_per_run.append(filtered_percentage)
+                label_info.append(f"{dimension}")
+                legend_info.append([dimension, groups, avg_picks, avg_distance])#filter_data.shape[0], np.round(top_distance, 2)])
 
-            print(picks_per_run)
+            #new_y = makeLabel(label_info)
             old_y = np.arange(len(dimensions_sorted)) + 1
-            new_positions = old_y * 2
             plt.boxplot(k_picks, vert=False)
-            new_y = [f"Dim_{dimensions_sorted[i]}\n ({picks_per_run[i]}% remaining k-values)" for i in range(len(dimensions_sorted))]
-            plt.yticks(old_y, new_y, rotation=0)
-            #plt.ylabel("Dimension")
+            createSmallTable(legend_info, dimensions_sorted)
+            plt.yticks(old_y, label_info)
+            plt.ylabel("Dimension")
             plt.xscale("log")
             plt.xlim([1, 1000])
             plt.xlabel("K-value (log scale)")
+
+
             sub_map = f"{save_map}/auc{auc_index}/"
             Path(sub_map).mkdir(parents=True, exist_ok=True)
             plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}.png", bbox_inches="tight")
             plt.close()
+
+
 
 def overviewTablePlot(plot_dict, metric_name, scaling_mode, save_map):
     key_pairs = np.array(list(plot_dict.keys()))
