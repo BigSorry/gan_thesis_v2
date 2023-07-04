@@ -3,6 +3,7 @@ import pandas as pd
 import check_densities as ch_den
 import matplotlib.pyplot as plt
 import sys
+import datetime
 
 def filterByAUC(dataframe):
     dimensions = dataframe["dimension"].unique()
@@ -37,7 +38,8 @@ def savePairs(dataframe, dimensions, real_scaled, save_map):
 
     dataframe = pd.DataFrame(data=all_rows, columns=column_names)
     sub_map = "real_scaled/" if real_scaled else "fake_scaled/"
-    dataframe.to_pickle(f"{save_map}{sub_map}dataframe_{dimensions}.pkl")
+    time = datetime.datetime.today().strftime('%Y-%m-%d')
+    dataframe.to_pickle(f"{save_map}{sub_map}dataframe_{dimensions}_{time}.pkl")
 
 all_ids = []
 str_input = (sys.argv[1]).lower()
@@ -47,6 +49,7 @@ if str_input == "true":
 elif str_input == "false":
     real_scaled = False
 save_path = "./dataframe_evaluation/"
+
 if real_scaled:
     df_path = "./dataframe_factors/dataframe_real.pkl"
 else:

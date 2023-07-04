@@ -52,26 +52,38 @@ def changeTableCellColor(cell_values, table, row_id, compare_val):
         value = cell_values[row_id, column_id]
         if value >= compare_val:
             table._cells[(row_id, column_id)]._text.set_color("white")
+def filterGroupedData(group, best_mode):
+    if best_mode:
+        top_distance = group.nsmallest(1, "distance").loc[:, "distance"].max()
+        boolean_filter = (group["distance"] <= top_distance) | (
+            np.isclose(group["distance"], [top_distance], atol=1e-2))
+    else:
+        top_distance = group.nlargest(1, "distance").loc[:, "distance"].max()
+        boolean_filter = (group["distance"] >= top_distance) | (
+            np.isclose(group["distance"], [top_distance], atol=1e-2))
+    filter_data = group.loc[boolean_filter, :]
 
-def getBestValues(dimension_data):
+    return filter_data, top_distance
+
+def getBestValues(dimension_data, best_mode=True):
     grouped_data = dimension_data.groupby(["iter", "auc_score"])
     k_values = []
     avg_picks = 0
     index = 0
     avg_distance = 0
     for name, group in grouped_data:
-        top_distance = group.nsmallest(1, "distance").loc[:, "distance"].max()
-        boolean_filter = (group["distance"] <= top_distance) | (
-            np.isclose(group["distance"], [top_distance], atol=1e-2))
-        filter_data = group.loc[boolean_filter, :]
+        filter_data, top_distance = filterGroupedData(group, best_mode)
         best_picks = filter_data["k_val"].values
         k_values.extend(best_picks)
         avg_picks += best_picks.shape[0]
         avg_distance += top_distance
-        index+=1
+        # Short fix grouping same auc score within same iteration
+        within_groups = np.ceil(group.shape[0] / 999)
+        index+=within_groups
 
-    avg_picks = np.round(avg_picks / index, 1)
-    avg_distance = np.round(avg_distance / index, 1)
+    if avg_picks > 0:
+        avg_picks = np.round(avg_picks / index, 1)
+        avg_distance = np.round(avg_distance / index, 1)
 
     return k_values, avg_picks, index, avg_distance
 
@@ -91,7 +103,7 @@ def createSmallTable(legend_info, dimensions):
     changeTableCellColor(table_vals, table, 2, 10)
     table.set_fontsize(16)
 
-def overviewBoxplot(dataframe, metric_name, scaling_mode, save_map):
+def overviewBoxplot(dataframe, metric_name, scaling_mode, best_mode, save_map):
     sel_data = dataframe.loc[(dataframe["dimension"] > 1) & (dataframe["dimension"] <= 555), :]
     dimensions_sorted = sorted(sel_data["dimension"].unique())
     sorted_auc = sorted(sel_data["auc_group"].unique())
@@ -103,7 +115,7 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, save_map):
         if sel_data.shape[0] > 0:
             for dimension in dimensions_sorted:
                 dimension_data = sel_data.loc[sel_data["dimension"] == dimension]
-                best_picks, avg_picks, groups, avg_distance = getBestValues(dimension_data)
+                best_picks, avg_picks, groups, avg_distance = getBestValues(dimension_data, best_mode=best_mode)
                 k_picks.append(best_picks)
                 label_info.append(f"{dimension}")
                 legend_info.append([dimension, groups, avg_picks, avg_distance])#filter_data.shape[0], np.round(top_distance, 2)])
@@ -118,13 +130,11 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, save_map):
             plt.xlim([1, 1000])
             plt.xlabel("K-value (log scale)")
 
-
-            sub_map = f"{save_map}/auc{auc_index}/"
+            best_mode_str = "best_pick" if best_mode else "worst_pick"
+            sub_map = f"{save_map}/{best_mode_str}/auc{auc_index}/"
             Path(sub_map).mkdir(parents=True, exist_ok=True)
             plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}.png", bbox_inches="tight")
             plt.close()
-
-
 
 def overviewTablePlot(plot_dict, metric_name, scaling_mode, save_map):
     key_pairs = np.array(list(plot_dict.keys()))
@@ -251,51 +261,43 @@ def fixSaveDF(dataframe, save_path):
     dataframe["first_score"] = actual_first
     dataframe["second_score"] = actual_second
     dataframe.to_pickle(f"{save_path}dataframe_all.pkl")
-def testDF(dataframe):
-    dataframe.boxplot(column=["auc_score"], by="dimension")
-    plt.show()
-
-def plotOverviews(dataframe, metric_name):
-    sel_data = dataframe.loc[(dataframe["metric_name"] == metric_name), :]
-    sel_data = sel_data.loc[(sel_data["dimension"] > 1) & (sel_data["dimension"] <= 555), :]
 
 
-    count_dict = getOverview(sel_data, auc_filter)
-    overview_dict[(metric_name, scaling_mode)] = count_dict
-    plot_dict = getExpectedValueDict(overview_dict)
-    overiewBarPlot(plot_dict, metric_name, scaling_mode, overview_map_bars)
-    overviewTablePlot(plot_dict, metric_name, scaling_mode, overview_map)
+def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
+    Path(path_box).mkdir(parents=True, exist_ok=True)
+    overview_dict = {}
+    read_all = False
+    for scaling_mode in scalings:
+        if read_all:
+            df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
+            df_list = []
+            sum_rows = 0
+            for file_name in glob.glob(df_path):
+                df = pd.read_pickle(file_name)
+                print(file_name, df.shape[0])
+                sum_rows += df.shape[0]
+                df_list.append(df)
+            all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
+        else:
+            df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+            all_dfs = util.readPickle(df_path_combined)
 
-metrics = ["pr", "dc"]
-scalings = ["real_scaled", "fake_scaled"]
-auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
-overview_map = "./gaussian_dimension/paper_img/overview_auc_dimension/"
-overview_map_bars = "./gaussian_dimension/paper_img/overview_auc_dimension/bars/"
-overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/"
-Path(overview_map).mkdir(parents=True, exist_ok=True)
-Path(overview_map_bars).mkdir(parents=True, exist_ok=True)
-overview_dict = {}
-read_all = False
-for scaling_mode in scalings:
-    if read_all:
-        df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
-        df_list = []
-        sum_rows = 0
-        for file_name in glob.glob(df_path):
-            df = pd.read_pickle(file_name)
-            print(file_name, df.shape[0])
-            sum_rows += df.shape[0]
-            df_list.append(df)
-        all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
-    else:
-        df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
-        all_dfs = util.readPickle(df_path_combined)
         assignAUCGroup(all_dfs, auc_filter)
-    for metric_name in metrics:
-        metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
-        overviewBoxplot(metric_df, metric_name, scaling_mode, overview_map_boxplots)
-        #plotOverviews(all_dfs, metric_name)
-        #testDF(all_dfs)
+        for metric_name in metrics:
+            metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
+            overviewBoxplot(metric_df, metric_name, scaling_mode, best_mode, path_box)
 
 
+metrics = ["pr"]
+scalings = ["real_scaled", "fake_scaled"]
+auc_filter = [(0, 1.1)]
+overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/all/"
+# # All plots
+createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
+createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
 
+overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/"
+auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
+createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
+createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
+plt.show()
