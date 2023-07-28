@@ -55,12 +55,12 @@ def changeTableCellColor(cell_values, table, row_id, compare_val):
 def filterGroupedData(group, best_mode):
     if best_mode:
         top_distance = group.nsmallest(1, "distance").loc[:, "distance"].max()
-        boolean_filter = (group["distance"] <= top_distance) | (
-            np.isclose(group["distance"], [top_distance], atol=1e-2))
+        boolean_filter = (group["distance"] <= top_distance) #| (
+            #np.isclose(group["distance"], [top_distance], atol=1e-2))
     else:
         top_distance = group.nlargest(1, "distance").loc[:, "distance"].max()
-        boolean_filter = (group["distance"] >= top_distance) | (
-            np.isclose(group["distance"], [top_distance], atol=1e-2))
+        boolean_filter = (group["distance"] >= top_distance) #| (
+            #np.isclose(group["distance"], [top_distance], atol=1e-2))
     filter_data = group.loc[boolean_filter, :]
 
     return filter_data, top_distance
@@ -74,16 +74,19 @@ def getBestValues(dimension_data, best_mode=True):
     for name, group in grouped_data:
         filter_data, top_distance = filterGroupedData(group, best_mode)
         best_picks = filter_data["k_val"].values
-        k_values.extend(best_picks)
+
         avg_picks += best_picks.shape[0]
         avg_distance += top_distance
         # Short fix grouping same auc score within same iteration
         within_groups = np.ceil(group.shape[0] / 999)
         index+=within_groups
+        filter_percentage = filter_data.shape[0] / group.shape[0]
+        if filter_percentage < .1:
+            k_values.extend(best_picks)
 
-    if avg_picks > 0:
-        avg_picks = np.round(avg_picks / index, 1)
-        avg_distance = np.round(avg_distance / index, 1)
+
+    avg_picks = np.round(avg_picks / index, 1)
+    avg_distance = np.round(avg_distance / index, 1)
 
     return k_values, avg_picks, index, avg_distance
 
@@ -126,14 +129,14 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, best_mode, save_map):
             createSmallTable(legend_info, dimensions_sorted)
             plt.yticks(old_y, label_info)
             plt.ylabel("Dimension")
-            plt.xscale("log")
-            plt.xlim([1, 1000])
+            plt.xscale("symlog")
+            plt.xlim([0, 1000])
             plt.xlabel("K-value (log scale)")
 
             best_mode_str = "best_pick" if best_mode else "worst_pick"
-            sub_map = f"{save_map}/{best_mode_str}/auc{auc_index}/"
+            sub_map = f"{save_map}/{best_mode_str}/"
             Path(sub_map).mkdir(parents=True, exist_ok=True)
-            plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}.png", bbox_inches="tight")
+            plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}_auc{auc_index}.png", bbox_inches="tight")
             plt.close()
 
 def overviewTablePlot(plot_dict, metric_name, scaling_mode, save_map):
@@ -233,7 +236,7 @@ def aucDimensionOverlap(dataframe, auc_filter):
 def assignAUCGroup(dataframe, auc_filter):
     dataframe["auc_group"] = -1
     for auc_index, (auc_begin, auc_end) in enumerate(auc_filter):
-        bool_array = (dataframe["auc_score"] >= auc_begin) & (dataframe["auc_score"] <= auc_end)
+        bool_array = (dataframe["auc_score"] >= auc_begin) & (dataframe["auc_score"] < auc_end)
         dataframe.loc[bool_array, "auc_group"] = auc_index
 def aucFairness(dataframe):
     dimensions = dataframe["dimension"].unique()
@@ -288,16 +291,11 @@ def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
             overviewBoxplot(metric_df, metric_name, scaling_mode, best_mode, path_box)
 
 
-metrics = ["pr"]
+metrics = ["pr", "dc"]
+metrics = ["pr", "dc"]
 scalings = ["real_scaled", "fake_scaled"]
-auc_filter = [(0, 1.1)]
-overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/all/"
-# # All plots
-createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
-createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
-
-overview_map_boxplots = "./gaussian_dimension/paper_img/overview_auc_dimension/boxplots/"
+overview_map_boxplots = "./gaussian_dimension/boxplots/"
 auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
 createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
-createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
-plt.show()
+#createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
+

@@ -7,6 +7,7 @@ import datetime
 
 def filterByAUC(dataframe):
     dimensions = dataframe["dimension"].unique()
+    all_ids = []
     for dim in dimensions:
         dimension_data = dataframe.loc[dataframe["dimension"] == dim, :]
         grouped = dimension_data.groupby(["dimensions_transformed"])["auc"].apply(
@@ -41,25 +42,25 @@ def savePairs(dataframe, dimensions, real_scaled, save_map):
     time = datetime.datetime.today().strftime('%Y-%m-%d')
     dataframe.to_pickle(f"{save_map}{sub_map}dataframe_{dimensions}_{time}.pkl")
 
-all_ids = []
-str_input = (sys.argv[1]).lower()
-real_scaled = True
-if str_input == "true":
+def doFilter():
+    str_input = (sys.argv[1]).lower()
     real_scaled = True
-elif str_input == "false":
-    real_scaled = False
-save_path = "./dataframe_evaluation/"
+    if str_input == "true":
+        real_scaled = True
+    elif str_input == "false":
+        real_scaled = False
+    save_path = "./dataframe_evaluation/"
 
-if real_scaled:
-    df_path = "./dataframe_factors/dataframe_real.pkl"
-else:
-    df_path = "./dataframe_factors/dataframe_fake.pkl"
+    if real_scaled:
+         "./dataframe_factors/dataframe_real.pkl"
+    else:
+        df_path = "./dataframe_factors/dataframe_fake.pkl"
 
-dataframe = pd.read_pickle(df_path)
-dataframe_filtered = filterByAUC(dataframe)
-str_dimensions = sys.argv[2].split(',')
-dimensions = [int(str_val) for str_val in str_dimensions]
-print(real_scaled, dimensions)
-savePairs(dataframe_filtered, dimensions, real_scaled, save_path)
+    dataframe = pd.read_pickle(df_path)
+    dataframe_filtered = filterByAUC(dataframe)
+    str_dimensions = sys.argv[2].split(',')
+    dimensions = [int(str_val) for str_val in str_dimensions]
+    print(real_scaled, dimensions)
+    savePairs(dataframe_filtered, dimensions, real_scaled, save_path)
 
 

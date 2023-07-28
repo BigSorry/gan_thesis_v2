@@ -18,8 +18,24 @@ def plotBoxplot(k_vals_best, ylim_arr, ylabel_text, save_path):
     plt.xticks(old_x, dimensions)
     plt.ylabel(ylabel_text)
     plt.ylim(ylim_arr)
+    plt.yscale("symlog")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()
+
+def plotDistances(distance_dict, distance_dict_worst, auc_dict, save_path):
+    for dimension, distance in distance_dict.items():
+        plt.figure()
+        x_values = auc_dict[dimension]
+        y_values = distance
+        plt.scatter(x_values, y_values, label="Best distances")
+        y_values = distance_dict_worst[dimension]
+        plt.scatter(x_values, y_values, label="Worst distances")
+
+        plt.legend()
+        plt.xlabel("Auc score")
+        plt.ylabel("L1 distance")
+        plt.savefig(save_path+f"_dim_{dimension}.png", bbox_inches="tight")
+        plt.close()
 
 def assignAUCGroup(dataframe, auc_filter):
     dataframe["auc_group"] = -1
@@ -38,7 +54,7 @@ def filterGroupedData(group, best_mode):
             np.isclose(group["distance"], [top_distance], atol=1e-2))
     filter_data = group.loc[boolean_filter, :]
 
-    return filter_data, top_distance
+    return filter_data
 
 def plotAUCDistribution(dataframe, save_path):
     dataframe.boxplot(column=["auc_score"], by=["dimension"])
@@ -46,46 +62,41 @@ def plotAUCDistribution(dataframe, save_path):
     plt.close()
 
 def groupImage(dataframe, save_path):
-
     auc_sorted = sorted(dataframe["auc_score"].unique())
     dimensions_sorted = sorted(dataframe["dimension"].unique())
     # for auc in auc_sorted:
     #     auc_data = dataframe.loc[dataframe["auc_group"] == auc, :]
-    k_vals_best = {}
-    k_vals_worst = {}
-    auc_scores_best = {}
-    auc_scores_worst = {}
+    best_distances = {}
+    worst_distances = {}
+    auc_scores = {}
     for dimension in dimensions_sorted:
-        if dimension not in k_vals_best:
-            k_vals_best[dimension] = []
-            k_vals_worst[dimension] = []
-            auc_scores_best[dimension] = []
-            auc_scores_worst[dimension] = []
+        if dimension not in best_distances:
+            best_distances[dimension] = []
+            worst_distances[dimension] = []
+            auc_scores[dimension] = []
         dimension_data = dataframe.loc[dataframe["dimension"] == dimension]
         grouped_data = dimension_data.groupby(["iter", "auc_score"])
 
         for key, group in grouped_data:
-            filter_data, top_distance = filterGroupedData(group, True)
-            filter_data_worst, top_distance_worst = filterGroupedData(group, False)
-            best_picks = filter_data["k_val"].values
-            worst_picks = filter_data_worst["k_val"].values
-            median_value = np.median(best_picks)
             auc_score = key[1]
-            if median_value <= 10:
-                k_vals_best[dimension].extend(best_picks)
-                auc_scores_best[dimension].append(auc_score)
-            else:
-                k_vals_worst[dimension].extend(worst_picks)
-                auc_scores_worst[dimension].append(auc_score)
+            iter = group["iter"].min()
+            best_distance = group["distance"].min()
+            worst_distance = group["distance"].max()
+            # filter_data = filterGroupedData(group, True)
+            # filter_data_worst = filterGroupedData(group, False)
+            # best_picks = filter_data["k_val"].values
+            # worst_picks = filter_data_worst["k_val"].values
+
+            best_distances[dimension].append(best_distance)
+            worst_distances[dimension].append(worst_distance)
+            auc_scores[dimension].append(auc_score)
 
     Path(save_path).mkdir(parents=True, exist_ok=True)
-    plotBoxplot(k_vals_best, [1, 11], "K-value", save_path+"best.png")
-    plotBoxplot(k_vals_worst, [1, 999], "K-value", save_path+"worst.png")
-    plotBoxplot(auc_scores_best, [0, 1.1], "Auc score", save_path+"auc_best.png")
-    plotBoxplot(auc_scores_worst, [0, 1.1], "Auc score", save_path+"auc_worst.png")
-
-
-
+    plotDistances(best_distances, worst_distances, auc_scores, save_path)
+    #plotBoxplot(best_distances, [0, 999], "K-value", save_path+"best.png")
+    #plotBoxplot(worst_distances, [0, 999], "K-value", save_path+"worst.png")
+    #plotBoxplot(auc_scores_best, [0, 1.1], "Auc score", save_path+"auc_best.png")
+    #plotBoxplot(auc_scores_worst, [0, 1.1], "Auc score", save_path+"auc_worst.png")
 
 def createPlots(metrics, scalings, auc_filter, save_map):
     read_all = False
@@ -108,12 +119,11 @@ def createPlots(metrics, scalings, auc_filter, save_map):
         assignAUCGroup(all_dfs, auc_filter)
         for metric_name in metrics:
             metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
-            plotAUCDistribution(metric_df, sub_map+"auc_all.png")
             groupImage(metric_df, sub_map)
+            plotAUCDistribution(metric_df, sub_map+"auc_all.png")
 
 metrics = ["pr"]
 scalings = ["real_scaled", "fake_scaled"]
-auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
 auc_filter = [(0, 1.1)]
 save_map = "./gaussian_dimension/best_worst_case/"
 createPlots(metrics, scalings, auc_filter, save_map)
