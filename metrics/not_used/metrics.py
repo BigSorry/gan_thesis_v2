@@ -2,7 +2,7 @@ import numpy as np
 from scipy.linalg import sqrtm
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
-import helper_functions as util
+from utility_scripts import helper_functions as util
 import metrics.improved_precision_recall as ipr
 import metrics.not_used.precision_recall_histogram as prh
 import metrics.not_used.precision_recall_classifier as prc

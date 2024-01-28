@@ -1,5 +1,4 @@
 import numpy as np
-import visualize as plotting
 from scipy.stats import multivariate_normal
 
 def getPRLambdas(angle_count = 50):

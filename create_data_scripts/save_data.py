@@ -1,6 +1,7 @@
-import helper_functions as helper
+from utility_scripts import helper_functions as helper, helper_functions as util
 import numpy as np
-import helper_functions as util
+
+
 def saveDistributions(param_dict, save_path):
     iterations = param_dict['iterations']
     sample_sizes = param_dict['sample_sizes']

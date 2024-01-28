@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import experiments.experiment_visualization as exp_vis
-import check_densities as ch_den
+from create_data_scripts import check_densities as ch_den
 from experiments import experiment_calc as exp
-import helper_functions as util
+from utility_scripts import helper_functions as util
+
 
 def doCalcs(sample_size, dimension, ratios, real_scaling=False):
     k_vals = [i for i in range(1, sample_size)]

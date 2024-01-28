@@ -1,12 +1,11 @@
 import numpy as np
-import helper_functions as util
+from utility_scripts import helper_functions as util
 import matplotlib.pyplot as plt
 from pathlib import Path
-import matplotlib.transforms
 import pandas as pd
 import seaborn as sns
 import glob
-from matplotlib import cm
+
 
 def filterGroupedData(group, best_mode):
     if best_mode:
@@ -16,7 +15,7 @@ def filterGroupedData(group, best_mode):
     else:
         top_distance = group.nlargest(1, "distance").loc[:, "distance"].max()
         boolean_filter = (group["distance"] >= top_distance) #| (
-            #np.isclose(group["distance"], [top_distance], atol=1e-2))
+
     filter_data = group.loc[boolean_filter, :]
 
     return filter_data, top_distance
@@ -53,7 +52,7 @@ def testHeatmap(count_map, xticks, yticks):
     ax.invert_yaxis()
     plt.yticks(rotation=45)
 
-def plotBox(dict_results, k_boundaries):
+def plotBars(dict_results, k_boundaries):
     auc_scores_list = list(dict_results.values())
     bins = 4
     array_bins, step = np.linspace(0, 1, bins+1, retstep=True)
@@ -77,17 +76,21 @@ def plotBox(dict_results, k_boundaries):
     # Bars
     plt.figure()
     print(count_map)
-    auc_labels = [f"({array_bins[i]}, {array_bins[i+1]}]" for i in range(len(array_bins)-1)]
+    auc_labels = [f"auc ({array_bins[i]}, {array_bins[i+1]}]" for i in range(len(array_bins)-1)]
     auc_labels[0] = auc_labels[0].replace("(", "[")
     # Set position of bar on X axis
-    bar_width = 0.2
-    start_x = np.arange(count_map.shape[1]) - ((bins // 2) - bar_width)
 
+    #start_x = np.arange(count_map.shape[1]) - ((bins // 2) - bar_width) * 10
+    start_x = (np.arange(count_map.shape[1])) * 4
+    bar_width = 0.5
+    add_space = 1
+    print(start_x, bar_width)
     for i in range(count_map.shape[0]):
         new_x = start_x + (bar_width*i)
         plt.bar(new_x, count_map[i, :], width=bar_width, label=auc_labels[i])
 
-    xticks = [f"k-values {begin}-{end}" for (begin, end) in k_boundaries]
+    xticks = [f"k-values {begin}-{min(999,end-1)}" for (begin, end) in k_boundaries]
+    print(k_boundaries)
     #old_tick = [x + bar_width for x in start_x]
     plt.xticks(start_x, xticks, rotation=90)
     plt.yscale("log")
@@ -103,8 +106,8 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, best_mode, save_map):
     k_values = list(auc_dict.keys())
     group_step = 500
     k_groups = [(i-group_step, i) for i in range(group_step, 1001, group_step)]
-    #k_groups = [(0, 1001)]
-    step_size = 50
+    k_groups = [(1, 1000)]
+    step_size = 100
     print(k_groups)
     for i, (begin_k, end_k) in enumerate(k_groups):
         new_dict = {}
@@ -120,7 +123,7 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, best_mode, save_map):
 
         k_value_groups = list(new_dict.keys())
         auc_scores_list = list(new_dict.values())
-        plotBox(new_dict, k_boundaries)
+        plotBars(new_dict, k_boundaries)
 
         # Scatter
         # plt.figure()
@@ -153,7 +156,7 @@ def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
     read_all = False
     for scaling_mode in scalings:
         if read_all:
-            df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
+            df_path = f"../dataframe_evaluation/{scaling_mode}/*.pkl"
             df_list = []
             sum_rows = 0
             for file_name in glob.glob(df_path):
@@ -163,7 +166,7 @@ def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
                 df_list.append(df)
             all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
         else:
-            df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+            df_path_combined = f"../dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
             all_dfs = util.readPickle(df_path_combined)
 
         assignAUCGroup(all_dfs, auc_filter)
@@ -173,12 +176,10 @@ def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
 
 
 metrics = ["pr", "dc"]
-metrics = ["pr"]
 scalings = ["real_scaled", "fake_scaled"]
-scalings = ["real_scaled"]
-overview_map_boxplots = "./gaussian_dimension/scatter_auc/"
+overview_map_boxplots = "../old_figures/scatter_auc/"
 auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
 auc_filter = [(0, 1.1)]
 createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
-#createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
+createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
 plt.show()

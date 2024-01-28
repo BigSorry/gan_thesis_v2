@@ -1,6 +1,5 @@
 import numpy as np
-import helper_functions as util
-import check_densities as ch_den
+from utility_scripts import helper_functions as util
 import glob
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -117,8 +116,11 @@ all_auc = []
 auc_filter = [(0, 0.1), (0.1, 0.9), (0.9, 1), (0, 1)]
 for metric in metrics:
     for scaling in scalings:
-        path = f"./factors/{metric}/{scaling}/*.pkl"
-        for file in glob.glob(path):
+        if scaling == "real_scaled":
+            path_factors = "../dataframe_factors/dataframe_real.pkl"
+        else:
+            path_factors = "../dataframe_factors/dataframe_fake.pkl"
+        for file in glob.glob(path_factors):
             dict = util.readPickle(file)
             auc_scores = dict["auc_scores"]
             all_auc.extend(auc_scores)
@@ -136,9 +138,9 @@ for metric in metrics:
 
 plotting=True
 if plotting:
-    base_map_distance = "./gaussian_dimension/paper_img/distance_plots/"
-    base_map_distance_box = "./gaussian_dimension/paper_img/boxplots/"
-    base_map_best_k = "./gaussian_dimension/paper_img/best_k/"
+    base_map_distance = "./test/distance_plots/"
+    base_map_distance_box = "./test/boxplots/"
+    base_map_best_k = "./test/best_k/"
     for (metric_name, scaling), dict_info in table_data.items():
         column_labels = [f"Top k{i}" for i in range(10)]
         auc_data = {i: {"x": [], "y": []} for i in range(4)}
@@ -172,6 +174,6 @@ if plotting:
         #corrPlot(auc_data, sub_map)
 
 
-# plotAucScores(all_auc)
-# plt.show()
+plotAucScores(all_auc)
+plt.show()
 

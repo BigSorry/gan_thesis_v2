@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.stats import multivariate_normal
-import helper_functions as helper
+from utility_scripts import helper_functions as helper
+
 
 def getGaussian(sample_size, dimension, other_scale):
     mean_vec = np.zeros(dimension)

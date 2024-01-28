@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from experiments import experiment_calc as exp
 import experiments.experiment_visualization as exp_vis
-import helper_functions as util
+from utility_scripts import helper_functions as util
 import matplotlib.transforms
 from scipy import integrate
 

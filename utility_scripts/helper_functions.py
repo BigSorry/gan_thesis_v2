@@ -1,11 +1,10 @@
 import math
 import pickle
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import visualize as plotting
+from utility_scripts import visualize as plotting
 from sklearn.metrics import pairwise_distances
-import os
-
 
 
 def getLambdas(angle_count, epsilon= 1e-10):
@@ -49,7 +48,8 @@ def readPickle(path):
     with open(path, 'rb') as fp:
         data = pickle.load(fp)
         return data
-
+def readCSV(file_path, nrows):
+    return pd.read_csv(file_path, nrows=nrows)
 def _circleCheck(circles, new_point, radius):
     check = True
     for circle in circles:

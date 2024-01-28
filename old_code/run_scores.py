@@ -4,7 +4,6 @@ import pandas as pd
 from experiments import experiment_calc as exp
 from experiments import  distributions as dist
 import matplotlib.pyplot as plt
-import visualize as plotting
 import experiments.experiment_visualization as exp_vis
 
 def plotErrorbars(dataframe, dimensions, k_vals, score_names, map_path):

@@ -4,9 +4,9 @@ import numpy as np
 from experiments import experiment_calc as exp
 from experiments import  distributions as dist
 import matplotlib.pyplot as plt
-import visualize as plotting
 import experiments.experiment_visualization as exp_vis
-import helper_functions as helper
+from utility_scripts import helper_functions as helper
+
 
 # TODO Refactoring
 def plotCurve(pr_dataframe, dc_dataframe, th_curve_dict, map_path):

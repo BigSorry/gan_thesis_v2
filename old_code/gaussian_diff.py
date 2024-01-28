@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
 from experiments import experiment_calc as exp
-from experiments import  distributions as dist
 import matplotlib.pyplot as plt
-import visualize as plotting
+from utility_scripts import visualize as plotting, helper_functions as helper
 import experiments.experiment_visualization as exp_vis
-import helper_functions as helper
-import save_data as save_data
+from create_data_scripts import save_data as save_data
+
 
 # TODO Refactoring
 def plotHeatMaps(dataframe, sample_size, scaling_factor, map_path):

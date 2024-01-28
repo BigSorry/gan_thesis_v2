@@ -1,13 +1,10 @@
 import numpy as np
 import pandas as pd
 from experiments import experiment_calc as exp
-from experiments import  distributions as dist
-import matplotlib.pyplot as plt
-import visualize as plotting
 import experiments.experiment_visualization as exp_vis
-import helper_functions as helper
-import helper_functions as util
-import save_data as save_data
+from utility_scripts import helper_functions as helper, helper_functions as util
+from create_data_scripts import save_data as save_data
+
 
 def runExperiment(distance_dict, reference_distribution, scaled_distribution, k_vals, lambda_params, real_scaling):
     constant_factor = lambda_params[0]

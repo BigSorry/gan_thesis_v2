@@ -1,10 +1,9 @@
 import numpy as np
-import helper_functions as util
+from utility_scripts import helper_functions as util
 import matplotlib.pyplot as plt
 from pathlib import Path
 import matplotlib.transforms
 import pandas as pd
-import seaborn as sns
 import glob
 
 def expectedK(k_values, counts):
@@ -52,6 +51,7 @@ def changeTableCellColor(cell_values, table, row_id, compare_val):
         value = cell_values[row_id, column_id]
         if value >= compare_val:
             table._cells[(row_id, column_id)]._text.set_color("white")
+
 def filterGroupedData(group, best_mode):
     if best_mode:
         top_distance = group.nsmallest(1, "distance").loc[:, "distance"].max()
@@ -83,7 +83,6 @@ def getBestValues(dimension_data, best_mode=True):
         filter_percentage = filter_data.shape[0] / group.shape[0]
         if filter_percentage < .1:
             k_values.extend(best_picks)
-
 
     avg_picks = np.round(avg_picks / index, 1)
     avg_distance = np.round(avg_distance / index, 1)
@@ -138,6 +137,62 @@ def overviewBoxplot(dataframe, metric_name, scaling_mode, best_mode, save_map):
             Path(sub_map).mkdir(parents=True, exist_ok=True)
             plt.savefig(f"{sub_map}{metric_name}_{scaling_mode}_auc{auc_index}.png", bbox_inches="tight")
             plt.close()
+
+def countTopPicks(dataframe):
+    dimensions_sorted = sorted(dataframe["dimension"].unique())
+    sorted_auc = sorted(dataframe["auc_group"].unique())
+    row_values = []
+    # TODO only quick fix to run old script
+    auc_index = 1
+    for dimension in dimensions_sorted:
+        dimension_data = dataframe.loc[dataframe["dimension"] == dimension]
+        best_picks, avg_picks, groups, avg_distance = getBestValues(dimension_data, best_mode=True)
+        for pick in best_picks:
+            values = [auc_index, dimension, pick]
+            row_values.append(values)
+
+    dataframe_top_picks = pd.DataFrame(data=row_values, columns=["auc_group", "dimension", "k_value"])
+    return dataframe_top_picks
+
+def tablePLot(count_df, save_path):
+    # Table plotting
+    plt.figure(figsize=(12, 16))
+    table = plt.table(cellText=count_df.values, rowLabels=count_df.index, colLabels=count_df.columns,
+                      loc="center")
+    plt.xlabel("K-value range")
+    plt.ylabel("Dimension")
+    plt.axis('off')
+    plt.axis('off')
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+    # prepare for saving:
+    # draw canvas once
+    plt.gcf().canvas.draw()
+    # get bounding box of table
+    points = table.get_window_extent(plt.gcf()._cachedRenderer).get_points()
+    # add 10 pixel spacing
+    points[0, :] -= 10
+    points[1, :] += 10
+    # get new bounding box in inches
+    nbbox = matplotlib.transforms.Bbox.from_extents(points / plt.gcf().dpi)
+    # save and clip by new bounding box
+    plt.savefig(save_path, bbox_inches=nbbox)
+    plt.close()
+
+def countPlot(dataframe, auc_filter, metric_name, scaling_mode, best_mode, save_map):
+    sel_data = dataframe.loc[(dataframe["dimension"] > 1) & (dataframe["dimension"] <= 555), :]
+    dataframe_top_picks = countTopPicks(sel_data)
+    bins = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    dataframe_top_picks["k_groups"] = pd.cut(dataframe_top_picks["k_value"], bins)
+    sorted_auc = sorted(dataframe["auc_group"].unique())
+    best_mode_str = "best_pick" if best_mode else "worst_pick"
+    sub_map = f"{save_map}/{best_mode_str}/"
+    Path(sub_map).mkdir(parents=True, exist_ok=True)
+    for auc_index in sorted_auc:
+        save_path = f"{sub_map}{metric_name}_{scaling_mode}_auc{auc_index}.png"
+        auc_sel = dataframe_top_picks.loc[dataframe_top_picks["auc_group"] == auc_index, :]
+        count_df = auc_sel.groupby(["dimension", "k_groups"]).size().unstack()
+        tablePLot(count_df, save_path)
 
 def overviewTablePlot(plot_dict, metric_name, scaling_mode, save_map):
     key_pairs = np.array(list(plot_dict.keys()))
@@ -220,6 +275,7 @@ def resampleDF(dataframe, dimensions, min_group_count):
         taken_indices.extend(list(df_elements.index))
 
     return taken_indices
+
 def aucDimensionOverlap(dataframe, auc_filter):
     dimensions = dataframe["dimension"].unique()
     all_indices = []
@@ -238,6 +294,7 @@ def assignAUCGroup(dataframe, auc_filter):
     for auc_index, (auc_begin, auc_end) in enumerate(auc_filter):
         bool_array = (dataframe["auc_score"] >= auc_begin) & (dataframe["auc_score"] < auc_end)
         dataframe.loc[bool_array, "auc_group"] = auc_index
+
 def aucFairness(dataframe):
     dimensions = dataframe["dimension"].unique()
     auc_scores = dataframe["auc_score"].unique()
@@ -271,31 +328,22 @@ def createPlots(metrics, scalings, auc_filter, path_box, best_mode=True):
     overview_dict = {}
     read_all = False
     for scaling_mode in scalings:
-        if read_all:
-            df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
-            df_list = []
-            sum_rows = 0
-            for file_name in glob.glob(df_path):
-                df = pd.read_pickle(file_name)
-                print(file_name, df.shape[0])
-                sum_rows += df.shape[0]
-                df_list.append(df)
-            all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
-        else:
-            df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
-            all_dfs = util.readPickle(df_path_combined)
+        df_path_combined = f"../dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+        all_dfs = util.readPickle(df_path_combined)
 
         assignAUCGroup(all_dfs, auc_filter)
         for metric_name in metrics:
             metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
             overviewBoxplot(metric_df, metric_name, scaling_mode, best_mode, path_box)
+            countPlot(metric_df, auc_filter, metric_name, scaling_mode, best_mode, path_box)
 
 
 metrics = ["pr", "dc"]
-metrics = ["pr", "dc"]
+metrics = ["pr"]
 scalings = ["real_scaled", "fake_scaled"]
-overview_map_boxplots = "./gaussian_dimension/boxplots/"
+scalings = ["real_scaled"]
+overview_map_boxplots = "./old_figures/boxplot_grouped/"
 auc_filter = [(0, 0.3), (0.3, 0.7), (0.7, 1.1)]
 createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=True)
-#createPlots(metrics, scalings, auc_filter, overview_map_boxplots, best_mode=False)
+
 

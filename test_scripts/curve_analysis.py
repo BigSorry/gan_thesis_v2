@@ -1,12 +1,11 @@
 import numpy as np
-import helper_functions as util
-import matplotlib.pyplot as plt
-from pathlib import Path
 import pandas as pd
-import glob
-from experiments import experiment_calc as exp
+import matplotlib.pyplot as plt
 from scipy import integrate
-import auc_pre_filter as auc_filter
+from utility_scripts import helper_functions as util
+from utility_scripts import winner_pick_utility as win_util
+from experiments import experiment_calc as exp
+from create_data_scripts import create_eval_df as auc_filter
 
 def assignAUCGroup(dataframe, auc_filter):
     dataframe["auc_group"] = -1
@@ -86,7 +85,6 @@ def getDataframe(dataframe, real_scaled):
                 print(name)
     dataframe = pd.DataFrame(data=all_rows, columns=column_names)
     return dataframe
-
 def getEvaluationPairs(iters, k_vals, sample_size, dimension, dimension_transformed, ratios, real_scaling=False):
     base_value = 1
     row_info = []
@@ -124,7 +122,7 @@ def getEvaluationPairs(iters, k_vals, sample_size, dimension, dimension_transfor
 
     return row_info, curves
 
-df_path = "./dataframe_factors/dataframe_real.pkl"
+df_path = "../dataframe_factors/dataframe_real.pkl"
 factors_saved = pd.read_pickle(df_path)
 dataframe_filtered = auc_filter.filterByAUC(factors_saved)
 dataframe_factors_sel = dataframe_filtered.loc[dataframe_filtered["iter"] == 0, :]

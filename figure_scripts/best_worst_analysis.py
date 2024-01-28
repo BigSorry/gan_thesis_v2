@@ -1,10 +1,8 @@
 import numpy as np
-import helper_functions as util
+from utility_scripts import helper_functions as util
 import matplotlib.pyplot as plt
 from pathlib import Path
-import matplotlib.transforms
 import pandas as pd
-import seaborn as sns
 import glob
 
 def plotBoxplot(k_vals_best, ylim_arr, ylabel_text, save_path):
@@ -62,31 +60,23 @@ def plotAUCDistribution(dataframe, save_path):
     plt.close()
 
 def groupImage(dataframe, save_path):
-    auc_sorted = sorted(dataframe["auc_score"].unique())
-    dimensions_sorted = sorted(dataframe["dimension"].unique())
-    # for auc in auc_sorted:
-    #     auc_data = dataframe.loc[dataframe["auc_group"] == auc, :]
+    grouped_data = dataframe.groupby(["iter", "auc_score", "dimension"])
     best_distances = {}
     worst_distances = {}
     auc_scores = {}
-    for dimension in dimensions_sorted:
+    for experiment_ids, experiment_data in grouped_data:
+        distances = experiment_data["distance"]
+        worst_distance = distances.max()
+        best_distance = distances.min()
+
+        auc_score = experiment_ids[1]
+        dimension = experiment_ids[2]
+
         if dimension not in best_distances:
-            best_distances[dimension] = []
-            worst_distances[dimension] = []
-            auc_scores[dimension] = []
-        dimension_data = dataframe.loc[dataframe["dimension"] == dimension]
-        grouped_data = dimension_data.groupby(["iter", "auc_score"])
-
-        for key, group in grouped_data:
-            auc_score = key[1]
-            iter = group["iter"].min()
-            best_distance = group["distance"].min()
-            worst_distance = group["distance"].max()
-            # filter_data = filterGroupedData(group, True)
-            # filter_data_worst = filterGroupedData(group, False)
-            # best_picks = filter_data["k_val"].values
-            # worst_picks = filter_data_worst["k_val"].values
-
+            best_distances[dimension] = [best_distance]
+            worst_distances[dimension] = [worst_distance]
+            auc_scores[dimension] = [auc_score]
+        else:
             best_distances[dimension].append(best_distance)
             worst_distances[dimension].append(worst_distance)
             auc_scores[dimension].append(auc_score)
@@ -98,33 +88,21 @@ def groupImage(dataframe, save_path):
     #plotBoxplot(auc_scores_best, [0, 1.1], "Auc score", save_path+"auc_best.png")
     #plotBoxplot(auc_scores_worst, [0, 1.1], "Auc score", save_path+"auc_worst.png")
 
-def createPlots(metrics, scalings, auc_filter, save_map):
-    read_all = False
+def createPlots(metrics, scalings, save_map):
+    auc_bins = [0, 0.3, 0.7, 0.9, 1.1]
     for scaling_mode in scalings:
-        sub_map = f"{save_map}{scaling_mode}/"
-        if read_all:
-            df_path = f"./dataframe_evaluation/{scaling_mode}/*.pkl"
-            df_list = []
-            sum_rows = 0
-            for file_name in glob.glob(df_path):
-                df = pd.read_pickle(file_name)
-                print(file_name, df.shape[0])
-                sum_rows += df.shape[0]
-                df_list.append(df)
-            all_dfs = pd.concat(df_list, axis=0, ignore_index=True)
-        else:
-            df_path_combined = f"./dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
-            all_dfs = util.readPickle(df_path_combined)
-
-        assignAUCGroup(all_dfs, auc_filter)
+        df_path_combined = f"../dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+        all_dfs = util.readPickle(df_path_combined)
         for metric_name in metrics:
+            sub_map = f"{save_map}{metric_name}_{scaling_mode}/"
             metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
-            groupImage(metric_df, sub_map)
-            plotAUCDistribution(metric_df, sub_map+"auc_all.png")
+            sel_data = metric_df.loc[(metric_df["dimension"] > 1) & (metric_df["dimension"] <= 555), :]
+            sel_data.loc[:, "auc_groups"] = pd.cut(sel_data["auc_score"], auc_bins, include_lowest=True, right=False)
 
-metrics = ["pr"]
+            groupImage(sel_data, sub_map)
+            plotAUCDistribution(sel_data, sub_map+"auc_all.png")
+
+metrics = ["pr", "dc"]
 scalings = ["real_scaled", "fake_scaled"]
-auc_filter = [(0, 1.1)]
-save_map = "./gaussian_dimension/best_worst_case/"
-createPlots(metrics, scalings, auc_filter, save_map)
-plt.show()
+save_map = "./best_worst_case/"
+createPlots(metrics, scalings, save_map)

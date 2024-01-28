@@ -1,10 +1,6 @@
 import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn import metrics
-import visualize as plotting
 import torch
-from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
-from sklearn.metrics import roc_curve
+
 
 # Rows are real samples and columns are generated samples
 def createTrainTest(real_features, fake_features):

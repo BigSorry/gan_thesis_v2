@@ -23,13 +23,33 @@ def plotTheoreticalCurve(curve_classifier, curve_var_dist, scale_factors, save=T
         path = f"C:/Users/lexme/Documents/gan_thesis_v2/present/1-02-23/ground-truths/scale_{scale_factors}.png"
         plt.savefig(path)
 
+def checkOverlap(included_coords, new_point):
+    included = True
+    for point in included_coords:
+        x = np.abs(point[0] - new_point[0])
+        y = np.abs(point[1] - new_point[1])
+        distance = (x+y) / 2
+        if distance < 0.1:
+            included = False
+
+    return included
+
 # Plotting is reversed to get recall on x axis
 def plotKNNMetrics(score_pair,  k_values, label_name, color, save_path, save=True):
     annotate_text = [f"k={k}" for k in k_values]
     plt.scatter(score_pair[:, 1], score_pair[:, 0], c=color, label=label_name)
+    last_index = len(annotate_text) - 1
+    coords_used = [(np.round(score_pair[0, 1], 2), np.round(score_pair[0, 0], 2)),
+                   (np.round(score_pair[last_index, 1], 2), np.round(score_pair[last_index, 0], 2))]
     for index, text in enumerate(annotate_text):
         coords = (score_pair[index, 1], score_pair[index, 0])
-        specialAnnotate(text, coords, fontsize=14)
+        coords_rounded = (np.round(score_pair[index, 1], 2), np.round(score_pair[index, 0], 2))
+        if index == 0 or index == last_index:
+            specialAnnotate(text, coords, fontsize=14)
+        elif checkOverlap(coords_used, coords_rounded) == True:
+            coords_used.append(coords_rounded)
+            specialAnnotate(text, coords, fontsize=14)
+
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                fancybox=True, shadow=True, ncol=2, fontsize=9)
     if save:
@@ -56,7 +76,7 @@ def plotCurveMetrics(histo_method, classifier_method, scale_factors, save=True):
         plt.savefig(path)
 
 def plotDistributions(real_data, fake_data, r_order, f_order, title_text, save_path, save=False):
-    plt.title(title_text)
+    #plt.title(title_text)
     plt.scatter(real_data[:, 0], real_data[:, 1], c="green", zorder=r_order, label="Real data")
     plt.scatter(fake_data[:, 0], fake_data[:, 1], c="red", zorder=f_order, label="Fake data")
     plt.legend(loc="lower right")

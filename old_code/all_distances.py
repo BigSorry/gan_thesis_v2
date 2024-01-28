@@ -1,10 +1,9 @@
 import numpy as np
-import helper_functions as util
-import check_densities as ch_den
+from utility_scripts import helper_functions as util
 import glob
 import matplotlib.pyplot as plt
 from pathlib import Path
-import seaborn as sns
+
 
 def updateDict(dict, metric_name, scaling, dimension, values_added):
     first_key = (metric_name, scaling)

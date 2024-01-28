@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-import check_densities as ch_den
+import matplotlib.pyplot as plt
+from create_data_scripts import check_densities as ch_den
 from scipy import integrate
 from experiments import experiment_calc as exp
+from utility_scripts import helper_functions as util
 
 def checkAUCSpread(iters, dimensions, ratios_taken, real_scaling):
     base_value = 1
@@ -47,4 +49,19 @@ def saveDF():
     df_path = "./pre_filter/dataframe_fake.pkl"
     dataframe.to_pickle(df_path)
 
+def checkDF():
+    metrics = ["pr", "dc"]
+    scalings = ["real_scaled", "fake_scaled"]
+    for scaling_mode in scalings:
+        df_path_combined = f"../dataframe_evaluation/{scaling_mode}/combined/dataframe_all.pkl"
+        all_dfs = util.readPickle(df_path_combined)
+        for metric_name in metrics:
+            metric_df = all_dfs.loc[all_dfs["metric_name"] == metric_name, :]
+            auc_values = metric_df["auc_score"]
+            dimension = metric_df["dimension"]
+            plt.figure()
+            plt.title(f"{metric_name}_{scaling_mode}")
+            plt.boxplot(auc_values)
 
+checkDF()
+plt.show()
