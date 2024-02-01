@@ -64,6 +64,7 @@ def saveCombinedPlot(map_path_images, variable_name, max_columns, save_file):
     rows = np.ceil(total_images / max_columns).astype(int)
     width = 8
     height = 12
+    height = 6
     print(rows, max_columns)
     fig, axs = plt.subplots(rows, max_columns,
                             figsize=(width, height))
@@ -81,7 +82,8 @@ def saveCombinedPlot(map_path_images, variable_name, max_columns, save_file):
         axs[index].imshow(image)
 
     fig.subplots_adjust(wspace=0, hspace=0)
-    plt.savefig(save_file, bbox_inches="tight", format="pdf", dpi=150)
+    plt.savefig(save_file, bbox_inches="tight", format="png", dpi=300)
+    #plt.savefig(save_file, bbox_inches="tight", format="pdf", dpi=150)
     plt.close()
 
 def saveMaps(metric_name, scaled_mode, variable_name):
@@ -114,8 +116,11 @@ def doIterations(max_winners, metrics, scale_modes, variable_name, scource_map, 
                 source_map_images = f"{scource_map}{variable_name}/{scenario_str}/"
                 # boxplot_all_k
                 source_map_images = f"{scource_map}{scenario_str}/{variable_name}/"
+                # No groupings
+                source_map_images = f"{scource_map}/"
                 print(source_map_images)
                 save_file = f"{save_map}{scenario_str}_max_winner{max_winner}.pdf"
+                save_file = f"{save_map}{scenario_str}_max_winner{max_winner}.png"
                 saveCombinedPlot(source_map_images, variable_name, max_columns, save_file)
 
 def combineHeatmaps():
@@ -137,14 +142,15 @@ def combineBoxplot():
     metrics = ["pr", "dc"]
     scale_modes = ["real_scaled", "fake_scaled"]
     variable_names = ["auc", "dimension", "auc_dimension"]
-    variable_names = ["auc_dimension"]
+    variable_names = [""]
     # cols AUC , Dim 3, AUC_Dim is 3
     max_columns = 2
-    max_columns = 3
+    max_columns = 2
     max_winners = [1]
     for variable_name in variable_names:
         source_map_images = f"../test_scripts/boxplot_all_k/max_winner1/"
         save_map = f"../combined_figures/boxplot_combined/{variable_name}/"
+        save_map = f"../combined_figures/boxplot_combined/"
         Path(save_map).mkdir(parents=True, exist_ok=True)
         doIterations(max_winners, metrics, scale_modes, variable_name, source_map_images, save_map, max_columns=max_columns)
 

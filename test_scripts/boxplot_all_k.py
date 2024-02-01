@@ -67,21 +67,23 @@ def saveBoxplots(grouped_data, parent_map_path, sub_map):
         plt.savefig(save__path, bbox_inches="tight", dpi=300)
         plt.close()
 
-def noGrouping(dataframe, map_path):
+def noGrouping(dataframe, metric_name, scaling_mode, map_path):
     maximum_distance = dataframe.groupby("k_val")["distance"].quantile(q=0.75)
     minimum_distance = dataframe.groupby("k_val")["distance"].quantile(q=0.25)
     distance_median = dataframe.groupby("k_val")["distance"].quantile(q=0.5)
 
-    title_text = "No grouping"
-    file_name = "no_grouping.png"
+    scenario_str = f"{metric_name}_{scaling_mode}"
+    title_text = scenario_str
+    file_name = f"{scenario_str}.png"
     boxes = dataframe.groupby("k_val").apply(lambda x: [x["distance"]])
     createBoxplot(title_text, boxes)
     createLines(distance_median, minimum_distance, maximum_distance)
+
     save__path = f"{map_path}{file_name}"
     plt.savefig(save__path, dpi=300)
     plt.close()
 
-def makeGroups(sel_df, map_path, one_var):
+def makeGroups(sel_df, map_path, metric_name, scaling_mode, one_var):
     if one_var == "auc_dimension":
         auc_dimension_grouped = sel_df.groupby(["auc_groups", "dimension"])
         saveBoxplots(auc_dimension_grouped, map_path, "/auc_dimension/")
@@ -90,7 +92,7 @@ def makeGroups(sel_df, map_path, one_var):
         dimension_grouped = sel_df.groupby(["dimension"])
         saveBoxplots(auc_grouped, map_path, "/auc/")
         saveBoxplots(dimension_grouped, map_path, "/dimension/")
-        noGrouping(sel_df, map_path)
+        noGrouping(sel_df, metric_name, scaling_mode, map_path)
 
 def getFilterMask(dataframe, max_winner=1):
     grouped_data = dataframe.groupby(["iter", "dimension", "auc_score"])
@@ -126,7 +128,7 @@ def createPlots(metrics, scalings, max_winner, map_path, one_var="all"):
             filtered_data.loc[:, "auc_groups"] = pd.cut(filtered_data["auc_score"], auc_bins, include_lowest=True, right=False)
 
             print(sel_data.shape[0], filtered_data.shape[0])
-            makeGroups(filtered_data, sub_map, one_var)
+            makeGroups(filtered_data, sub_map, metric_name, scaling_mode, one_var)
 
 def allExperiments():
     metrics = ["pr", "dc"]
@@ -135,7 +137,7 @@ def allExperiments():
     max_winners = [1]
     for max_winner in max_winners:
         overview_map_boxplots = f"./boxplot_all_k/max_winner{max_winner}/"
-        createPlots(metrics, scalings, max_winner, overview_map_boxplots, one_var="auc_dimension")
+        createPlots(metrics, scalings, max_winner, overview_map_boxplots, one_var="all")
 
 def smallExperiment():
     metrics = ["pr"]
